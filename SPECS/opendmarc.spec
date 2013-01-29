@@ -3,7 +3,7 @@ Name: opendmarc
 Version: 1.0.1
 Release: 1%{?dist}
 License: BSD and Sendmail
-URL: http://opendmarc.org/
+URL: http://www.trusteddomain.org/opendmarc.html
 Group: System Environment/Daemons
 Requires: lib%{name} = %{version}-%{release}
 Requires (pre): shadow-utils
