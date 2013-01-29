@@ -1,21 +1,21 @@
-# Pass --define "BETA 3" to build name-version.0.Beta3.1.arch
-%define BetaTag %{?BETA:.Beta%{BETA}}
-
 Summary: DMARC milter and library
 Name: opendmarc
 Version: 1.0.1
-Release: %{?BETA:0%{BetaTag}.}1%{?dist}
+Release: 1%{?dist}
 License: BSD and Sendmail
-URL: http://http://www.trusteddomain.org/opendmarc.html
+URL: http://opendmarc.org/
 Group: System Environment/Daemons
 Requires: lib%{name} = %{version}-%{release}
 Requires (pre): shadow-utils
 Requires (post): chkconfig
 Requires (preun): chkconfig, initscripts
 Requires (postun): initscripts
+
 BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig
 BuildRequires: mysql-devel
-Source0: http://downloads.sourceforge.net/%{name}/%{name}-%{version}%{BetaTag}.tar.gz
+
+Source0: http://downloads.sourceforge.net/%{name}/%{name}-%{version}.tar.gz
+
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %description
@@ -64,11 +64,11 @@ mkdir -p %{buildroot}%{_sysconfdir}
 mkdir -p %{buildroot}%{_initrddir}
 install -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
 install -m 0755 opendmarc/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
+
 # Set some basic settings in the default config file
-perl -pi -e 's|^# (HistoryFile /var/run)/(opendmarc.dat)|$1/opendmarc/$2/;
-             s|^# (Socket )|$1|;
-             s|^# (UserId )|$1|;
-            ' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# HistoryFile |HistoryFile |' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# UserID|UserID |' %{buildroot}%{_sysconfdir}/%{name}.conf
 
 install -p -d %{buildroot}%{_sysconfdir}/tmpfiles.d
 cat > %{buildroot}%{_sysconfdir}/tmpfiles.d/%{name}.conf <<EOF
@@ -141,6 +141,9 @@ rm -rf %{buildroot}
 %changelog
 * Mon Jan 28 2013 Steve Jenkins <steve@stevejenkins.com.com> 1.0.1
 - Accepted Fedora SPEC file management from Todd Lyons (thx, Todd!)
+- Fixed some default config file issues by using sed
+- Removed BETA references
+- Fixed URL in Header
 
 * Wed Jan 23 2013 Todd Lyons <tlyons@ivenue.com> 1.0.1-1iv
 - New release (behind schedule)
