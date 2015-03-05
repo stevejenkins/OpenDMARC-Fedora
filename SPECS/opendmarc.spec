@@ -84,7 +84,6 @@ mkdir -p %{buildroot}%{_sysconfdir}
 install -d %{buildroot}%{_sysconfdir}/sysconfig
 mkdir -p %{buildroot}%{_initrddir}
 install -d -m 0755 %{buildroot}%{_unitdir}
-#install -m 0644 contrib/systemd/%{name}.service %{buildroot}%{_unitdir}/%{name}.service
 install -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
 install -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
 mkdir -p -m 0755 %{buildroot}%{_sysconfdir}/%{name}
@@ -165,7 +164,6 @@ fi
 
 #Uncomment for systemd:
 if [ $1 -eq 0 ] ; then
-    # Package removal, not upgrade
     /bin/systemctl --no-reload disable %{name}.service > /dev/null 2>&1 || :
     /bin/systemctl stop %{name}.service > /dev/null 2>&1 || :
 fi
@@ -222,10 +220,11 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
-* Wed Mar 04 2015 Steve Jenkins <steve@stevejenkins.com> 1.3.1-2
-- Split spec files into and SysV versions with same build numbers
-- Added comment for EL5 to bypass MD5 build errors
-- Added .service file for systemd
+* Thu Mar 05 2015 Steve Jenkins <steve@stevejenkins.com> 1.3.1-2
+- Branched spec files into systemd and SysV versions
+- Added top comment for EL5 to bypass MD5 build errors
+- Added opendmarc.service file for systemd support
+- Added sysconfig file support for runtime options
 
 * Sat Feb 28 2015 Matt Domsch <mdomsch@fedoraproject.org> 1.3.1-1
 - upgrade to 1.3.1
@@ -248,7 +247,7 @@ rm -rf %{buildroot}
 - set umask to 007
 - set UserID to opendmarc:mail
 
-* Mon Jan 28 2013 Steve Jenkins <steve@stevejenkins.com.com> 1.0.1
+* Mon Jan 28 2013 Steve Jenkins <steve@stevejenkins.com> 1.0.1
 - Accepted Fedora SPEC file management from Todd Lyons (thx, Todd!)
 - Fixed some default config file issues by using sed
 - Removed BETA references
