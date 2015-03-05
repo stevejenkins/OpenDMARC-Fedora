@@ -1,6 +1,6 @@
 This git repo contains:
 
-- SPECS/opendmarc.spec - spec file for the OpenDMARC package I maintain in Fedora & EPEL
+- SPECS/opendmarc.spec - spec file for the OpenDMARC package I co-maintain in Fedora & EPEL
 
 - PATCHES - patches for the spec file, as needed, depending on version
 
@@ -8,4 +8,4 @@ CONTRIBUTORS: Please do pull requests in the "develop" branch only. The "master"
 
 For official source code and documentation, please visit:
 
-http://opendmarc.org/
+http://www.trusteddomain.org/opendmarc/
