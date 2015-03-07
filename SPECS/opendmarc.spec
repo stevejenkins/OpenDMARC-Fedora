@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/opendmarc.html
@@ -26,7 +26,7 @@ Requires (post): systemd-sysv
 
 # Required for all versions
 BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig
-BuildRequires: mysql-devel
+BuildRequires: libbsd, libbsd-devel, mysql-devel
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -220,6 +220,9 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
+* Fri Mar 06 2015 Steve Jenkins <steve@stevejenkins.com> 1.3.1-3
+- Added libbsd and libbsd-devel build requirement to fix libstrl issue
+
 * Thu Mar 05 2015 Steve Jenkins <steve@stevejenkins.com> 1.3.1-2
 - Branched spec files into systemd and SysV versions
 - Added top comment for EL5 to bypass MD5 build errors
