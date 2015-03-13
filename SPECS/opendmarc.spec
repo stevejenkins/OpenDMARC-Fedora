@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 3%{?dist}
+Release: 4%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/opendmarc.html
@@ -113,13 +113,14 @@ WantedBy=multi-user.target
 EOF
 
 # Set some basic settings in the default config file
-sed -i 's|^# HistoryFile /var/run/opendmarc.dat|HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# HistoryFile /var/run/opendmarc.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# Syslog false|Syslog true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# UMask 077|UMask 007|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# UserID  opendmarc|UserID  opendmarc:mail|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# SoftwareHeader false|SoftwareHeader true|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# SPFIgnoreResults false|SPFIgnoreResults true|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# SPFSelfValidate false|SPFSelfValidate true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# Syslog false|Syslog true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# UMask 077|UMask 007|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# UserID opendmarc|UserID opendmarc:mail|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|/usr/local||' %{buildroot}%{_sysconfdir}/%{name}.conf
 
 install -p -d %{buildroot}%{_sysconfdir}/tmpfiles.d
@@ -220,6 +221,14 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
+* Thu Mar 12 2015 Steve Jenkins <steve@stevejenkins.com> 1.3.1-4
+- Dropped El5/SysV support due to perl-IO-Compress dependency probs
+- Fixed extra space in UserID default setting
+- Disabled HistoryFile logging by default
+- Set default SoftwareHeader to true
+- Set default SPFIgnoreResults to true
+- Set default SPFSelfValidate to true
+
 * Fri Mar 06 2015 Steve Jenkins <steve@stevejenkins.com> 1.3.1-3
 - Added libbsd and libbsd-devel build requirement to fix libstrl issue
 
