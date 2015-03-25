@@ -1,11 +1,11 @@
-# systemd-compatible version
+%global systemd (0%{?fedora} && 0%{?fedora} >= 18) || (0%{?rhel} && 0%{?rhel} >= 7)
 
 %{!?_pkgdocdir: %global _pkgdocdir %{_docdir}/%{name}-%{version}}
 
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/opendmarc.html
@@ -13,16 +13,18 @@ Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar
 Requires: lib%{name} = %{version}-%{release}
 Requires (pre): shadow-utils
 
-# Uncomment for systemd version
+%if %systemd
+# Required for systemd
 Requires (post): systemd-units
 Requires (preun): systemd-units
 Requires (postun): systemd-units
 Requires (post): systemd-sysv
-
-#Uncomment for SystemV version
-#Requires (post): chkconfig
-#Requires (preun): chkconfig, initscripts
-#Requires (postun): initscripts
+%else
+# Required for SysV
+Requires (post): chkconfig
+Requires (preun): chkconfig, initscripts
+Requires (postun): initscripts
+%endif
 
 # Required for all versions
 BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig
@@ -61,7 +63,13 @@ required for developing applications against libopendmarc.
 
 %prep
 %setup -q
+%if %systemd
+# Apply systemd patches
 #%patch0 -p1
+%else
+# Apply SysV patches
+#%patch0 -p1
+%endif
 
 %build
 # Always use system libtool instead of opendmarc provided one to
@@ -82,10 +90,6 @@ rm -rf %{buildroot}
 make DESTDIR=%{buildroot} install %{?_smp_mflags} %{LIBTOOL}
 mkdir -p %{buildroot}%{_sysconfdir}
 install -d %{buildroot}%{_sysconfdir}/sysconfig
-mkdir -p %{buildroot}%{_initrddir}
-install -d -m 0755 %{buildroot}%{_unitdir}
-install -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
-install -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
 mkdir -p -m 0755 %{buildroot}%{_sysconfdir}/%{name}
 
 cat > %{buildroot}%{_sysconfdir}/sysconfig/%{name} << 'EOF'
@@ -93,6 +97,8 @@ cat > %{buildroot}%{_sysconfdir}/sysconfig/%{name} << 'EOF'
 OPTIONS="-c %{_sysconfdir}/%{name}.conf -P %{_localstatedir}/run/%{name}/%{name}.pid"
 EOF
 
+%if %systemd
+install -d -m 0755 %{buildroot}%{_unitdir}
 cat > %{buildroot}%{_unitdir}/%{name}.service << 'EOF'
 [Unit]
 Description=Domain-based Message Authentication, Reporting & Conformance (DMARC) Milter
@@ -111,8 +117,14 @@ Group=opendmarc
 [Install]
 WantedBy=multi-user.target
 EOF
+%else
+mkdir -p %{buildroot}%{_initrddir}
+install -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
+%endif
 
-# Set some basic settings in the default config file
+# Install and set some basic settings in the default config file
+install -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
+
 sed -i 's|^# HistoryFile /var/run/opendmarc.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# SoftwareHeader false|SoftwareHeader true|' %{buildroot}%{_sysconfdir}/%{name}.conf
@@ -148,47 +160,51 @@ getent passwd %{name} >/dev/null || \
 exit 0
 
 %post
-# Initial installation
-
-#Uncomment for systemd:
+%if %systemd
 if [ $1 -eq 1 ] ; then 
+    # Initial installation 
     /bin/systemctl enable %{name}.service >/dev/null 2>&1 || :
 fi
 
-#Uncomment for SysV:
-#/sbin/chkconfig --add %{name} || :
+%else
 
-%post -n libopendmarc -p /sbin/ldconfig
+/sbin/chkconfig --add %{name} || :
+%endif
 
 %preun
-# Package removal, not upgrade
-
-#Uncomment for systemd:
+%if %systemd
 if [ $1 -eq 0 ] ; then
+    # Package removal, not upgrade
     /bin/systemctl --no-reload disable %{name}.service > /dev/null 2>&1 || :
     /bin/systemctl stop %{name}.service > /dev/null 2>&1 || :
 fi
 
-#Uncomment for SysV:
-#if [ $1 -eq 0 ]; then
-#	service %{name} stop >/dev/null || :
-#	/sbin/chkconfig --del %{name} || :
-#fi
-#exit 0
+%else
+
+if [ $1 -eq 0 ]; then
+	service %{name} stop >/dev/null || :
+	/sbin/chkconfig --del %{name} || :
+fi
+exit 0
+%endif
 
 %postun
-# Package upgrade, not uninstall
-#Uncomment for systemd:
+%if %systemd
 /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
+    # Package upgrade, not uninstall
     /bin/systemctl try-restart %{name}.service >/dev/null 2>&1 || :
 fi
 
-#Uncomment for SysV:
-#if [ "$1" -ge "1" ] ; then
-#	/sbin/service %{name} condrestart >/dev/null 2>&1 || :
-#fi
-#exit 0
+%else
+
+if [ "$1" -ge "1" ] ; then
+	/sbin/service %{name} condrestart >/dev/null 2>&1 || :
+fi
+exit 0
+%endif
+
+%post -n libopendmarc -p /sbin/ldconfig
 
 %postun -n libopendmarc -p /sbin/ldconfig
 
@@ -202,13 +218,17 @@ rm -rf %{buildroot}
 %config(noreplace) %{_sysconfdir}/%{name}.conf
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/%{name}.conf
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
-%{_initrddir}/%{name}
 %{_sbindir}/*
 %{_mandir}/*/*
 %dir %attr(-,%{name},%{name}) %{_localstatedir}/spool/%{name}
 %dir %attr(-,%{name},mail) %{_localstatedir}/run/%{name}
 %dir %attr(-,%{name},%{name}) %{_sysconfdir}/%{name}
+
+%if %systemd
 %attr(0644,root,root) %{_unitdir}/%{name}.service
+%else
+%attr(0755,root,root) %{_initrddir}/%{name}
+%endif
 
 %files -n libopendmarc
 %defattr(-,root,root)
@@ -221,6 +241,9 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
+* Wed Mar 25 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-5
+- Combined systemd and SysV spec files using conditionals
+
 * Thu Mar 12 2015 Steve Jenkins <steve@stevejenkins.com> 1.3.1-4
 - Dropped El5/SysV support due to perl-IO-Compress dependency probs
 - Fixed extra space in UserID default setting
