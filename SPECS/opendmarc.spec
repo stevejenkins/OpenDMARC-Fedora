@@ -1,11 +1,9 @@
 %global systemd (0%{?fedora} && 0%{?fedora} >= 18) || (0%{?rhel} && 0%{?rhel} >= 7)
 
-%{!?_pkgdocdir: %global _pkgdocdir %{_docdir}/%{name}-%{version}}
-
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 5%{?dist}
+Release: 6%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/opendmarc.html
@@ -125,6 +123,7 @@ install -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
 # Install and set some basic settings in the default config file
 install -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
 
+sed -i 's|^# AuthservID name |AuthservID HOSTNAME |' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# HistoryFile /var/run/opendmarc.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# SoftwareHeader false|SoftwareHeader true|' %{buildroot}%{_sysconfdir}/%{name}.conf
@@ -241,8 +240,12 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
-* Wed Mar 25 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-5
+* Sat Mar 28 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-6
+- Removed uneeded _pkgdocdir reference
+
+* Fri Mar 27 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-5
 - Combined systemd and SysV spec files using conditionals
+- Set AuthservID configuration option to HOSTNAME by default
 
 * Thu Mar 12 2015 Steve Jenkins <steve@stevejenkins.com> 1.3.1-4
 - Dropped El5/SysV support due to perl-IO-Compress dependency probs
