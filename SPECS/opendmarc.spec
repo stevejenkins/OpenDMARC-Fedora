@@ -54,7 +54,7 @@ using libopendmarc.
 %package -n libopendmarc-devel
 Summary: Development files for libopendmarc
 Group: Development/Libraries
-Requires: libopendmarc%{?_isa} = %{version}-%{release}
+Requires: lib%{name}%{?_isa} = %{version}-%{release}
 
 %description -n libopendmarc-devel
 This package contains the static libraries, headers, and other support files
@@ -244,8 +244,8 @@ rm -rf %{buildroot}
 * Sat Mar 28 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-7
 - added %{?_isa} to Requires where necessary
 - added sendmail-milter to Requires
-- moved libbsd to Requires from BuildRequires
-
+- moved libbsd from BuildRequires to Requires
+- added policycoreutils and policycoreutils-python to Requires (post)
 
 * Sat Mar 28 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-6
 - Removed uneeded _pkgdocdir reference
