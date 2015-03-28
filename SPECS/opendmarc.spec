@@ -3,13 +3,18 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 6%{?dist}
+Release: 7%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/opendmarc.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar.gz
-Requires: lib%{name} = %{version}-%{release}
+
+# Required for all versions
+Requires: lib%{name}%{?_isa} = %{version}-%{release}
+Requires: sendmail-milter, libbsd
+BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd-devel, mysql-devel
 Requires (pre): shadow-utils
+Requires (post): policycoreutils, policycoreutils-python
 
 %if %systemd
 # Required for systemd
@@ -23,10 +28,6 @@ Requires (post): chkconfig
 Requires (preun): chkconfig, initscripts
 Requires (postun): initscripts
 %endif
-
-# Required for all versions
-BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig
-BuildRequires: libbsd, libbsd-devel, mysql-devel
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
@@ -53,7 +54,7 @@ using libopendmarc.
 %package -n libopendmarc-devel
 Summary: Development files for libopendmarc
 Group: Development/Libraries
-Requires: libopendmarc = %{version}-%{release}
+Requires: lib%{name}%{?_isa} = %{version}-%{release}
 
 %description -n libopendmarc-devel
 This package contains the static libraries, headers, and other support files
@@ -240,6 +241,12 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
+* Sat Mar 28 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-7
+- added %{?_isa} to Requires where necessary
+- added sendmail-milter to Requires
+- moved libbsd from BuildRequires to Requires
+- added policycoreutils and policycoreutils-python to Requires (post)
+
 * Sat Mar 28 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-6
 - Removed uneeded _pkgdocdir reference
 
