@@ -3,7 +3,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 7%{?dist}
+Release: 8%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/opendmarc.html
@@ -11,8 +11,7 @@ Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
-Requires: sendmail-milter, libbsd
-BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd-devel, mysql-devel
+BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
 Requires (pre): shadow-utils
 Requires (post): policycoreutils, policycoreutils-python
 
@@ -106,12 +105,12 @@ After=network.target nss-lookup.target syslog.target
 
 [Service]
 Type=forking
-PIDFile=/var/run/opendmarc/opendmarc.pid
-EnvironmentFile=-/etc/sysconfig/opendmarc
-ExecStart=/usr/sbin/opendmarc $OPTIONS
+PIDFile=/var/run/%{name}/%{name}.pid
+EnvironmentFile=-/etc/sysconfig/%{name}
+ExecStart=/usr/sbin/%{name} $OPTIONS
 ExecReload=/bin/kill -USR1 $MAINPID
-User=opendmarc
-Group=opendmarc
+User=%{name}
+Group=%{name}
 
 [Install]
 WantedBy=multi-user.target
@@ -212,8 +211,12 @@ exit 0
 rm -rf %{buildroot}
 
 %files
-%defattr(-,root,root)
-%doc LICENSE LICENSE.Sendmail README RELEASE_NOTES docs/draft-dmarc-base-13.txt
+%if 0%{?_licensedir:1}
+%license LICENSE LICENSE.Sendmail
+%else
+%doc LICENSE LICENSE.Sendmail
+%endif
+%doc README RELEASE_NOTES docs/draft-dmarc-base-13.txt
 %doc db/README.schema db/schema.mysql
 %config(noreplace) %{_sysconfdir}/%{name}.conf
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/%{name}.conf
@@ -231,16 +234,21 @@ rm -rf %{buildroot}
 %endif
 
 %files -n libopendmarc
-%defattr(-,root,root)
 %{_libdir}/libopendmarc.so.*
 
 %files -n libopendmarc-devel
-%defattr(-,root,root)
 %doc libopendmarc/docs/*.html
 %{_includedir}/%{name}
 %{_libdir}/*.so
 
 %changelog
+* Sun Mar 29 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-8
+- removed unecessary Requires packages
+- moved libbsd back to BuildRequires
+- removed unecessary %defattr
+- added support for %license in place of %doc
+- Changed some %{name} macro usages
+
 * Sat Mar 28 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-7
 - added %{?_isa} to Requires where necessary
 - added sendmail-milter to Requires
