@@ -15,7 +15,11 @@ Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
 BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
 Requires (pre): shadow-utils
+
+#Required for all but EL5
+%if (0%{?fedora} && 0%{?fedora} >= 18) || (0%{?rhel} && 0%{?rhel} >= 6)
 Requires (post): policycoreutils, policycoreutils-python
+%endif
 
 %if %systemd
 # Required for systemd
@@ -57,7 +61,7 @@ Summary: Development files for libopendmarc
 Group: Development/Libraries
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
 
-%description -n lib%{name}c-devel
+%description -n lib%{name}-devel
 This package contains the static libraries, headers, and other support files
 required for developing applications against libopendmarc.
 
@@ -76,7 +80,7 @@ required for developing applications against libopendmarc.
 # properly handle 32 versus 64 bit detection and settings
 %define LIBTOOL LIBTOOL=`which libtool`
 
-%configure --with-spf
+%configure --with-spf --with-sql-backend
 
 # remove rpath
 sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
@@ -245,6 +249,8 @@ rm -rf %{buildroot}
 
 %changelog
 * Mon Mar 30 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-9
+- policycoreutils* now only required for Fedora and EL6+
+- Added --with-sql-backend configure support
 - Changed a few macros
 
 * Sun Mar 29 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-8
