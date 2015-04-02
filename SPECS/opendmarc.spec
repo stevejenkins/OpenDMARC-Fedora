@@ -1,19 +1,25 @@
 %global systemd (0%{?fedora} && 0%{?fedora} >= 18) || (0%{?rhel} && 0%{?rhel} >= 7)
+%global upname OpenDMARC
+%global bigname OPENDMARC
 
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 8%{?dist}
+Release: 9%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
-URL: http://www.trusteddomain.org/opendmarc.html
+URL: http://www.trusteddomain.org/%{name}.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar.gz
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
 BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
 Requires (pre): shadow-utils
+
+#Required for all but EL5
+%if (0%{?fedora} && 0%{?fedora} >= 18) || (0%{?rhel} && 0%{?rhel} >= 6)
 Requires (post): policycoreutils, policycoreutils-python
+%endif
 
 %if %systemd
 # Required for systemd
@@ -33,7 +39,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 # Patch0: %{name}.patchname.patch
 
 %description
-OpenDMARC (Domain-based Message Authentication, Reporting & Conformance)
+%{upname} (Domain-based Message Authentication, Reporting & Conformance)
 provides an open source library that implements the DMARC verification
 service plus a milter-based filter application that can plug in to any
 milter-aware MTA, including sendmail, Postfix, or any other MTA that supports
@@ -55,7 +61,7 @@ Summary: Development files for libopendmarc
 Group: Development/Libraries
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
 
-%description -n libopendmarc-devel
+%description -n lib%{name}-devel
 This package contains the static libraries, headers, and other support files
 required for developing applications against libopendmarc.
 
@@ -70,11 +76,11 @@ required for developing applications against libopendmarc.
 %endif
 
 %build
-# Always use system libtool instead of opendmarc provided one to
+# Always use system libtool instead of package-provided one to
 # properly handle 32 versus 64 bit detection and settings
 %define LIBTOOL LIBTOOL=`which libtool`
 
-%configure --with-spf
+%configure --with-spf --with-sql-backend
 
 # remove rpath
 sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
@@ -100,7 +106,7 @@ install -d -m 0755 %{buildroot}%{_unitdir}
 cat > %{buildroot}%{_unitdir}/%{name}.service << 'EOF'
 [Unit]
 Description=Domain-based Message Authentication, Reporting & Conformance (DMARC) Milter
-Documentation=man:opendmarc(8) man:opendmarc.conf(5) man:opendmarc-import(8) man:opendmarc-reports(8) http://www.trusteddomain.org/opendmarc/
+Documentation=man:%{name}(8) man:%{name}.conf(5) man:%{name}-import(8) man:%{name}-reports(8) http://www.trusteddomain.org/%{name}/
 After=network.target nss-lookup.target syslog.target
 
 [Service]
@@ -124,14 +130,14 @@ install -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
 install -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
 
 sed -i 's|^# AuthservID name |AuthservID HOSTNAME |' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# HistoryFile /var/run/opendmarc.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# HistoryFile /var/run/%{name}.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# SoftwareHeader false|SoftwareHeader true|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# SPFIgnoreResults false|SPFIgnoreResults true|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# SPFSelfValidate false|SPFSelfValidate true|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# Syslog false|Syslog true|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|^# UMask 077|UMask 007|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# UserID opendmarc|UserID opendmarc:mail|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# UserID %{name}|UserID %{name}:mail|' %{buildroot}%{_sysconfdir}/%{name}.conf
 sed -i 's|/usr/local||' %{buildroot}%{_sysconfdir}/%{name}.conf
 
 install -p -d %{buildroot}%{_sysconfdir}/tmpfiles.d
@@ -146,7 +152,7 @@ rm -rf %{buildroot}%{_prefix}/share/doc/%{name}
 rm %{buildroot}%{_libdir}/*.{la,a}
 
 mkdir -p %{buildroot}%{_includedir}/%{name}
-install -m 0644 libopendmarc/dmarc.h %{buildroot}%{_includedir}/%{name}/
+install -m 0644 lib%{name}/dmarc.h %{buildroot}%{_includedir}/%{name}/
 
 mkdir -p %{buildroot}%{_localstatedir}/spool/%{name}
 mkdir -p %{buildroot}%{_localstatedir}/run/%{name}
@@ -155,7 +161,7 @@ mkdir -p %{buildroot}%{_localstatedir}/run/%{name}
 getent group %{name} >/dev/null || groupadd -r %{name}
 getent passwd %{name} >/dev/null || \
 	useradd -r -g %{name} -G mail -d %{_localstatedir}/run/%{name} -s /sbin/nologin \
-	-c "OpenDMARC Milter" %{name}
+	-c "%{upname} Milter" %{name}
 exit 0
 
 %post
@@ -234,14 +240,19 @@ rm -rf %{buildroot}
 %endif
 
 %files -n libopendmarc
-%{_libdir}/libopendmarc.so.*
+%{_libdir}/lib%{name}.so.*
 
 %files -n libopendmarc-devel
-%doc libopendmarc/docs/*.html
+%doc lib%{name}/docs/*.html
 %{_includedir}/%{name}
 %{_libdir}/*.so
 
 %changelog
+* Mon Mar 30 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-9
+- policycoreutils* now only required for Fedora and EL6+
+- Added --with-sql-backend configure support
+- Changed a few macros
+
 * Sun Mar 29 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-8
 - removed unecessary Requires packages
 - moved libbsd back to BuildRequires
