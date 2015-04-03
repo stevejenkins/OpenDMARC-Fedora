@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 9%{?dist}
+Release: 10%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
@@ -16,9 +16,8 @@ Requires: lib%{name}%{?_isa} = %{version}-%{release}
 BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
 Requires (pre): shadow-utils
 
-#Required for all but EL5
-%if (0%{?fedora} && 0%{?fedora} >= 18) || (0%{?rhel} && 0%{?rhel} >= 6)
-Requires (post): policycoreutils, policycoreutils-python
+%if 0%{?rhel} && 0%{?rhel} == 5
+Requires (post): policycoreutils
 %endif
 
 %if %systemd
@@ -248,6 +247,9 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
+* Fri Apr 03 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-10
+- policycoreutils now only required for EL5
+
 * Mon Mar 30 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-9
 - policycoreutils* now only required for Fedora and EL6+
 - Added --with-sql-backend configure support
