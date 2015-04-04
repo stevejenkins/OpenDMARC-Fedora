@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 10%{?dist}
+Release: 11%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
@@ -14,23 +14,23 @@ Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
 BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
-Requires (pre): shadow-utils
+Requires(pre): shadow-utils
 
 %if 0%{?rhel} && 0%{?rhel} == 5
-Requires (post): policycoreutils
+Requires(post): policycoreutils
 %endif
 
 %if %systemd
 # Required for systemd
-Requires (post): systemd-units
-Requires (preun): systemd-units
-Requires (postun): systemd-units
-Requires (post): systemd-sysv
+Requires(post): systemd-units
+Requires(preun): systemd-units
+Requires(postun): systemd-units
+Requires(post): systemd-sysv
 %else
 # Required for SysV
-Requires (post): chkconfig
-Requires (preun): chkconfig, initscripts
-Requires (postun): initscripts
+Requires(post): chkconfig
+Requires(preun): chkconfig, initscripts
+Requires(postun): initscripts
 %endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -247,6 +247,9 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
+* Fri Apr 03 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-11
+- Removed excessive spaces
+
 * Fri Apr 03 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-10
 - policycoreutils now only required for EL5
 
@@ -266,7 +269,7 @@ rm -rf %{buildroot}
 - added %{?_isa} to Requires where necessary
 - added sendmail-milter to Requires
 - moved libbsd from BuildRequires to Requires
-- added policycoreutils and policycoreutils-python to Requires (post)
+- added policycoreutils and policycoreutils-python to Requires(post)
 
 * Sat Mar 28 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-6
 - Removed uneeded _pkgdocdir reference
