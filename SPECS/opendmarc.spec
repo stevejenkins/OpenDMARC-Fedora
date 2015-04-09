@@ -16,6 +16,7 @@ Requires: lib%{name}%{?_isa} = %{version}-%{release}
 BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
 Requires(pre): shadow-utils
 
+# Exceptions for EL5
 %if 0%{?rhel} && 0%{?rhel} == 5
 Requires(post): policycoreutils
 %else
@@ -82,9 +83,9 @@ required for developing applications against libopendmarc.
 %define LIBTOOL LIBTOOL=`which libtool`
 
 %if 0%{?rhel} && 0%{?rhel} == 5
-%configure --with-spf --with-sql-backend
+%configure --with-sql-backend --with-spf 
 %else
-%configure --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
+%configure --with-sql-backend --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
 %endif
 
 # remove rpath
@@ -253,7 +254,7 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
-* Wed Apr 08 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-12
+* Thu Apr 09 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-12
 - Added --with-libspf2 support for all branches except EL5
 
 * Fri Apr 03 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-11
