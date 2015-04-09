@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 12%{?dist}
+Release: 11%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
@@ -254,11 +254,8 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
-* Thu Apr 09 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-12
+* Thu Apr 09 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-11
 - Added --with-libspf2 support for all branches except EL5
-
-* Fri Apr 03 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-11
-- Removed excessive spaces
 
 * Fri Apr 03 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-10
 - policycoreutils now only required for EL5
