@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 11%{?dist}
+Release: 12%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
@@ -18,6 +18,8 @@ Requires(pre): shadow-utils
 
 %if 0%{?rhel} && 0%{?rhel} == 5
 Requires(post): policycoreutils
+%else
+BuildRequires: libspf2
 %endif
 
 %if %systemd
@@ -79,7 +81,11 @@ required for developing applications against libopendmarc.
 # properly handle 32 versus 64 bit detection and settings
 %define LIBTOOL LIBTOOL=`which libtool`
 
+%if 0%{?rhel} && 0%{?rhel} == 5
 %configure --with-spf --with-sql-backend
+%else
+%configure --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
+%endif
 
 # remove rpath
 sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
@@ -247,6 +253,9 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
+* Wed Apr 08 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-12
+- Added --with-libspf2 support for all branches except EL5
+
 * Fri Apr 03 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-11
 - Removed excessive spaces
 
