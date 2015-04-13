@@ -13,7 +13,7 @@ Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
-BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel, libspf2-devel
+BuildRequires: sendmail-devel, libspf2-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
 Requires(pre): shadow-utils
 
 %if %systemd
@@ -29,7 +29,7 @@ Requires(preun): chkconfig, initscripts
 Requires(postun): initscripts
 %endif
 
-# Required just for EL5
+# Required for EL5
 %if 0%{?rhel} && 0%{?rhel} == 5
 Requires(post): policycoreutils
 %endif
@@ -81,9 +81,9 @@ required for developing applications against libopendmarc.
 %define LIBTOOL LIBTOOL=`which libtool`
 
 %if 0%{?rhel} && 0%{?rhel} == 5
-%configure --with-spf --with-sql-backend
+%configure --with-sql-backend --with-spf 
 %else
-%configure --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
+%configure --with-sql-backend --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
 %endif
 
 # remove rpath
@@ -253,11 +253,11 @@ rm -rf %{buildroot}
 
 %changelog
 * Mon Apr 13 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-12
-- Added libspf2 to BuildRequires
-- Added --with-libspf2 support
+- Added libspf2-devel to BuildRequires
+- libspf2 support now provided for all branches
 
-* Fri Apr 03 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-11
-- Removed excessive spaces
+* Thu Apr 09 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-11
+- Added --with-libspf2 support for all branches except EL5
 
 * Fri Apr 03 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-10
 - policycoreutils now only required for EL5
