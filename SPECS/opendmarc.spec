@@ -13,14 +13,8 @@ Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
-BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
+BuildRequires: sendmail-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel, libspf2-devel
 Requires(pre): shadow-utils
-
-%if 0%{?rhel} && 0%{?rhel} == 5
-Requires(post): policycoreutils
-%else
-BuildRequires: libspf2
-%endif
 
 %if %systemd
 # Required for systemd
@@ -33,6 +27,11 @@ Requires(post): systemd-sysv
 Requires(post): chkconfig
 Requires(preun): chkconfig, initscripts
 Requires(postun): initscripts
+%endif
+
+# Required just for EL5
+%if 0%{?rhel} && 0%{?rhel} == 5
+Requires(post): policycoreutils
 %endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
@@ -253,8 +252,9 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
-* Wed Apr 08 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-12
-- Added --with-libspf2 support for all branches except EL5
+* Mon Apr 13 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-12
+- Added libspf2 to BuildRequires
+- Added --with-libspf2 support
 
 * Fri Apr 03 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-11
 - Removed excessive spaces
