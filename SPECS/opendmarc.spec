@@ -86,28 +86,26 @@ required for developing applications against libopendmarc.
 %configure --with-sql-backend --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
 %endif
 
-# remove rpath
-sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
-sed -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
+# Remove rpath
+%{__sed} -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
+%{__sed} -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
 
-make DESTDIR=%{buildroot} %{?_smp_mflags} %{LIBTOOL}
+%{__make} DESTDIR=%{buildroot} %{?_smp_mflags} %{LIBTOOL}
 
 %install
-rm -rf %{buildroot}
+%{__make} DESTDIR=%{buildroot} install %{?_smp_mflags} %{LIBTOOL}
+%{__mkdir} -p %{buildroot}%{_sysconfdir}
+%{__install} -d %{buildroot}%{_sysconfdir}/sysconfig
+%{__mkdir} -p -m 0755 %{buildroot}%{_sysconfdir}/%{name}
 
-make DESTDIR=%{buildroot} install %{?_smp_mflags} %{LIBTOOL}
-mkdir -p %{buildroot}%{_sysconfdir}
-install -d %{buildroot}%{_sysconfdir}/sysconfig
-mkdir -p -m 0755 %{buildroot}%{_sysconfdir}/%{name}
-
-cat > %{buildroot}%{_sysconfdir}/sysconfig/%{name} << 'EOF'
+%{__cat} > %{buildroot}%{_sysconfdir}/sysconfig/%{name} << 'EOF'
 # Set the necessary startup options
 OPTIONS="-c %{_sysconfdir}/%{name}.conf -P %{_localstatedir}/run/%{name}/%{name}.pid"
 EOF
 
 %if %systemd
-install -d -m 0755 %{buildroot}%{_unitdir}
-cat > %{buildroot}%{_unitdir}/%{name}.service << 'EOF'
+%{__install} -d -m 0755 %{buildroot}%{_unitdir}
+%{__cat} > %{buildroot}%{_unitdir}/%{name}.service << 'EOF'
 [Unit]
 Description=Domain-based Message Authentication, Reporting & Conformance (DMARC) Milter
 Documentation=man:%{name}(8) man:%{name}.conf(5) man:%{name}-import(8) man:%{name}-reports(8) http://www.trusteddomain.org/%{name}/
@@ -126,40 +124,40 @@ Group=%{name}
 WantedBy=multi-user.target
 EOF
 %else
-mkdir -p %{buildroot}%{_initrddir}
-install -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
+%{__mkdir} -p %{buildroot}%{_initrddir}
+%{__install} -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
 %endif
 
 # Install and set some basic settings in the default config file
-install -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__install} -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
 
-sed -i 's|^# AuthservID name |AuthservID HOSTNAME |' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# HistoryFile /var/run/%{name}.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# SoftwareHeader false|SoftwareHeader true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# SPFIgnoreResults false|SPFIgnoreResults true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# SPFSelfValidate false|SPFSelfValidate true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# Syslog false|Syslog true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# UMask 077|UMask 007|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# UserID %{name}|UserID %{name}:mail|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|/usr/local||' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# AuthservID name |AuthservID HOSTNAME |' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# HistoryFile /var/run/%{name}.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# SoftwareHeader false|SoftwareHeader true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# SPFIgnoreResults false|SPFIgnoreResults true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# SPFSelfValidate false|SPFSelfValidate true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# Syslog false|Syslog true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# UMask 077|UMask 007|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# UserID %{name}|UserID %{name}:mail|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|/usr/local||' %{buildroot}%{_sysconfdir}/%{name}.conf
 
-install -p -d %{buildroot}%{_sysconfdir}/tmpfiles.d
-cat > %{buildroot}%{_sysconfdir}/tmpfiles.d/%{name}.conf <<EOF
+%{__install} -p -d %{buildroot}%{_sysconfdir}/tmpfiles.d
+%{__cat} > %{buildroot}%{_sysconfdir}/tmpfiles.d/%{name}.conf <<EOF
 D %{_localstatedir}/run/%{name} 0700 %{name} %{name} -
 EOF
 
-rm -rf %{buildroot}%{_prefix}/share/doc/%{name}
+%{__rm} -rf %{buildroot}%{_prefix}/share/doc/%{name}
 #mv %{buildroot}%{_prefix}/share/doc/%{name} %{buildroot}%{_prefix}/share/doc/%{name}-%{version}
 #find %{buildroot}%{_prefix}/share/doc/%{name}-%{version} -type f -exec chmod 0644 \{\} \;
 #sed -i -e 's:/usr/local/bin/python:/usr/bin/python:' %{buildroot}%{_prefix}/share/doc/%{name}/dmarcfail.py
-rm %{buildroot}%{_libdir}/*.{la,a}
+%{__rm} %{buildroot}%{_libdir}/*.{la,a}
 
-mkdir -p %{buildroot}%{_includedir}/%{name}
-install -m 0644 lib%{name}/dmarc.h %{buildroot}%{_includedir}/%{name}/
+%{__mkdir} -p %{buildroot}%{_includedir}/%{name}
+%{__install} -m 0644 lib%{name}/dmarc.h %{buildroot}%{_includedir}/%{name}/
 
-mkdir -p %{buildroot}%{_localstatedir}/spool/%{name}
-mkdir -p %{buildroot}%{_localstatedir}/run/%{name}
+%{__mkdir} -p %{buildroot}%{_localstatedir}/spool/%{name}
+%{__mkdir} -p %{buildroot}%{_localstatedir}/run/%{name}
 
 %pre
 getent group %{name} >/dev/null || groupadd -r %{name}
@@ -218,7 +216,7 @@ exit 0
 %postun -n libopendmarc -p /sbin/ldconfig
 
 %clean
-rm -rf %{buildroot}
+%{__rm} -rf %{buildroot}
 
 %files
 %if 0%{?_licensedir:1}
@@ -252,6 +250,9 @@ rm -rf %{buildroot}
 %{_libdir}/*.so
 
 %changelog
+* Mon Apr 13 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-13
+- Replaced various commands with rpm macros
+
 * Mon Apr 13 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-12
 - Added libspf2-devel to BuildRequires
 - libspf2 support now provided for all branches
