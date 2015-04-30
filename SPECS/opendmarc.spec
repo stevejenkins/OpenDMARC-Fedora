@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 12%{?dist}
+Release: 13%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
@@ -168,26 +168,15 @@ exit 0
 
 %post
 %if %systemd
-if [ $1 -eq 1 ] ; then 
-    # Initial installation 
-    /bin/systemctl enable %{name}.service >/dev/null 2>&1 || :
-fi
-
+%systemd_post %{name}.service
 %else
-
 /sbin/chkconfig --add %{name} || :
 %endif
 
 %preun
 %if %systemd
-if [ $1 -eq 0 ] ; then
-    # Package removal, not upgrade
-    /bin/systemctl --no-reload disable %{name}.service > /dev/null 2>&1 || :
-    /bin/systemctl stop %{name}.service > /dev/null 2>&1 || :
-fi
-
+%systemd_preun %{name}.service
 %else
-
 if [ $1 -eq 0 ]; then
 	service %{name} stop >/dev/null || :
 	/sbin/chkconfig --del %{name} || :
@@ -197,14 +186,8 @@ exit 0
 
 %postun
 %if %systemd
-/bin/systemctl daemon-reload >/dev/null 2>&1 || :
-if [ $1 -ge 1 ] ; then
-    # Package upgrade, not uninstall
-    /bin/systemctl try-restart %{name}.service >/dev/null 2>&1 || :
-fi
-
+%systemd_postun_with_restart %{name}.service
 %else
-
 if [ "$1" -ge "1" ] ; then
 	/sbin/service %{name} condrestart >/dev/null 2>&1 || :
 fi
@@ -250,8 +233,9 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
-* Mon Apr 13 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-13
+* Wed Apr 29 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-13
 - Replaced various commands with rpm macros
+- Included support for systemd macros (#1216881)
 
 * Mon Apr 13 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-12
 - Added libspf2-devel to BuildRequires
