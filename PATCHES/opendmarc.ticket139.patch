@@ -1,0 +1,21 @@
+Description: add rDNS to FailureReport Source-IP field
+             as suggested on dmarc-discuss
+URL: http://lists.dmarc.org/pipermail/dmarc-discuss/2015-September/003237.html
+Author: A. Schulze
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+Index: opendmarc-1.3.1/opendmarc/opendmarc.c
+===================================================================
+--- opendmarc-1.3.1.orig/opendmarc/opendmarc.c
++++ opendmarc-1.3.1/opendmarc/opendmarc.c
+@@ -2865,8 +2865,8 @@ mlfi_eom(SMFICTX *ctx)
+ 			                      dfc->mctx_envfrom);
+ 
+ 			dmarcf_dstring_printf(dfc->mctx_afrf,
+-			                      "Source-IP: %s\n",
+-			                      cc->cctx_ipstr);
++			                      "Source-IP: %s (%s)\n",
++			                      cc->cctx_ipstr, cc->cctx_host);
+ 
+ 			dmarcf_dstring_printf(dfc->mctx_afrf,
+ 			                      "Reported-Domain: %s\n\n",
