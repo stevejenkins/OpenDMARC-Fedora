@@ -76,17 +76,17 @@ required for developing applications against libopendmarc.
 
 %prep
 %setup -q
+# Apply Global patches
+%patch0 -p1
+%patch1 -p1
+%patch2 -p1
+%patch3 -p1
 %if %systemd
 # Apply systemd-only patches
 #%patch0 -p1
 %else
 # Apply SysV-only patches
 #%patch0 -p1
-# Apply Global patches
-%patch0 -p1
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
 %endif
 
 %build
