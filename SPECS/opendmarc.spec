@@ -29,9 +29,7 @@ Requires(pre): shadow-utils
 
 %if %systemd
 # Required for systemd
-Requires(post): systemd-units
-Requires(preun): systemd-units
-Requires(postun): systemd-units
+%systemd_requires
 %else
 # Required for SysV
 Requires(post): chkconfig
