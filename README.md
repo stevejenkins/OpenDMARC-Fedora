@@ -8,8 +8,6 @@ This git repo contains:
 
 **CONTRIBUTORS:** Please do pull requests in the "develop" branch only. The "master" branch is just for release versions. Thanks!
 
-For the SystemV-compatible version of this repo, visit http://github.com/stevejenkins/OpenDMARC-SysV/
-
 For official source code and documentation, please visit http://www.trusteddomain.org/opendmarc/
 
 Find/follow/friend me at:
