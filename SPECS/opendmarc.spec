@@ -5,8 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 16%{?dist}
-Group: System Environment/Daemons
+Release: 17%{?dist}
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar.gz
@@ -102,25 +101,25 @@ required for developing applications against libopendmarc.
 %endif
 
 # Remove rpath
-%{__sed} -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
-%{__sed} -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
+sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
+sed -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
 
-%{__make} DESTDIR=%{buildroot} %{?_smp_mflags} %{LIBTOOL}
+make DESTDIR=%{buildroot} %{?_smp_mflags} %{LIBTOOL}
 
 %install
-%{__make} DESTDIR=%{buildroot} install %{?_smp_mflags} %{LIBTOOL}
-%{__mkdir} -p %{buildroot}%{_sysconfdir}
-%{__install} -d %{buildroot}%{_sysconfdir}/sysconfig
-%{__mkdir} -p -m 0755 %{buildroot}%{_sysconfdir}/%{name}
+make DESTDIR=%{buildroot} install %{?_smp_mflags} %{LIBTOOL}
+mkdir -p %{buildroot}%{_sysconfdir}
+install -d %{buildroot}%{_sysconfdir}/sysconfig
+mkdir -p -m 0755 %{buildroot}%{_sysconfdir}/%{name}
 
-%{__cat} > %{buildroot}%{_sysconfdir}/sysconfig/%{name} << 'EOF'
+cat > %{buildroot}%{_sysconfdir}/sysconfig/%{name} << 'EOF'
 # Set the necessary startup options
 OPTIONS="-c %{_sysconfdir}/%{name}.conf -P %{_localstatedir}/run/%{name}/%{name}.pid"
 EOF
 
 %if %systemd
-%{__install} -d -m 0755 %{buildroot}%{_unitdir}
-%{__cat} > %{buildroot}%{_unitdir}/%{name}.service << 'EOF'
+install -d -m 0755 %{buildroot}%{_unitdir}
+cat > %{buildroot}%{_unitdir}/%{name}.service << 'EOF'
 [Unit]
 Description=Domain-based Message Authentication, Reporting & Conformance (DMARC) Milter
 Documentation=man:%{name}(8) man:%{name}.conf(5) man:%{name}-import(8) man:%{name}-reports(8) http://www.trusteddomain.org/%{name}/
@@ -139,40 +138,40 @@ Group=%{name}
 WantedBy=multi-user.target
 EOF
 %else
-%{__mkdir} -p %{buildroot}%{_initrddir}
-%{__install} -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
+mkdir -p %{buildroot}%{_initrddir}
+install -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
 %endif
 
 # Install and set some basic settings in the default config file
-%{__install} -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
+install -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
 
-%{__sed} -i 's|^# AuthservID name |AuthservID HOSTNAME |' %{buildroot}%{_sysconfdir}/%{name}.conf
-%{__sed} -i 's|^# HistoryFile /var/run/%{name}.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
-%{__sed} -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
-%{__sed} -i 's|^# SoftwareHeader false|SoftwareHeader true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-%{__sed} -i 's|^# SPFIgnoreResults false|SPFIgnoreResults true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-%{__sed} -i 's|^# SPFSelfValidate false|SPFSelfValidate true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-%{__sed} -i 's|^# Syslog false|Syslog true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-%{__sed} -i 's|^# UMask 077|UMask 007|' %{buildroot}%{_sysconfdir}/%{name}.conf
-%{__sed} -i 's|^# UserID %{name}|UserID %{name}:mail|' %{buildroot}%{_sysconfdir}/%{name}.conf
-%{__sed} -i 's|/usr/local||' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# AuthservID name |AuthservID HOSTNAME |' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# HistoryFile /var/run/%{name}.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# SoftwareHeader false|SoftwareHeader true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# SPFIgnoreResults false|SPFIgnoreResults true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# SPFSelfValidate false|SPFSelfValidate true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# Syslog false|Syslog true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# UMask 077|UMask 007|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|^# UserID %{name}|UserID %{name}:mail|' %{buildroot}%{_sysconfdir}/%{name}.conf
+sed -i 's|/usr/local||' %{buildroot}%{_sysconfdir}/%{name}.conf
 
-%{__install} -p -d %{buildroot}%{_sysconfdir}/tmpfiles.d
-%{__cat} > %{buildroot}%{_sysconfdir}/tmpfiles.d/%{name}.conf <<EOF
+install -p -d %{buildroot}%{_sysconfdir}/tmpfiles.d
+cat > %{buildroot}%{_sysconfdir}/tmpfiles.d/%{name}.conf <<EOF
 D %{_localstatedir}/run/%{name} 0700 %{name} %{name} -
 EOF
 
-%{__rm} -rf %{buildroot}%{_prefix}/share/doc/%{name}
+rm -rf %{buildroot}%{_prefix}/share/doc/%{name}
 #mv %{buildroot}%{_prefix}/share/doc/%{name} %{buildroot}%{_prefix}/share/doc/%{name}-%{version}
 #find %{buildroot}%{_prefix}/share/doc/%{name}-%{version} -type f -exec chmod 0644 \{\} \;
 #sed -i -e 's:/usr/local/bin/python:/usr/bin/python:' %{buildroot}%{_prefix}/share/doc/%{name}/dmarcfail.py
-%{__rm} %{buildroot}%{_libdir}/*.{la,a}
+rm %{buildroot}%{_libdir}/*.{la,a}
 
-%{__mkdir} -p %{buildroot}%{_includedir}/%{name}
-%{__install} -m 0644 lib%{name}/dmarc.h %{buildroot}%{_includedir}/%{name}/
+mkdir -p %{buildroot}%{_includedir}/%{name}
+install -m 0644 lib%{name}/dmarc.h %{buildroot}%{_includedir}/%{name}/
 
-%{__mkdir} -p %{buildroot}%{_localstatedir}/spool/%{name}
-%{__mkdir} -p %{buildroot}%{_localstatedir}/run/%{name}
+mkdir -p %{buildroot}%{_localstatedir}/spool/%{name}
+mkdir -p %{buildroot}%{_localstatedir}/run/%{name}
 
 %pre
 getent group %{name} >/dev/null || groupadd -r %{name}
@@ -213,15 +212,8 @@ exit 0
 
 %postun -n libopendmarc -p /sbin/ldconfig
 
-%clean
-%{__rm} -rf %{buildroot}
-
 %files
-%if 0%{?_licensedir:1}
 %license LICENSE LICENSE.Sendmail
-%else
-%doc LICENSE LICENSE.Sendmail
-%endif
 %doc README RELEASE_NOTES docs/draft-dmarc-base-13.txt
 %doc db/README.schema db/schema.mysql
 %config(noreplace) %{_sysconfdir}/%{name}.conf
@@ -248,6 +240,9 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Mon Apr 11 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-17
+- Updating spec file to more modern conventions (thx, tibbs)
+
 * Mon Apr 11 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-16
 - Added patches for SourceForge tickets 115, 131, 138, 139
 
