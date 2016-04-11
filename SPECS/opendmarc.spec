@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.1
-Release: 13%{?dist}
+Release: 16%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
@@ -36,7 +36,17 @@ Requires(post): policycoreutils
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-# Patch0: %{name}.patchname.patch
+# https://sourceforge.net/p/opendmarc/tickets/115/
+Patch0: %{name}.ticket115.patch
+
+# https://sourceforge.net/p/opendmarc/tickets/131/
+Patch1: %{name}.ticket131.patch
+
+# https://sourceforge.net/p/opendmarc/tickets/138/
+Patch2: %{name}.ticket138.patch
+
+# https://sourceforge.net/p/opendmarc/tickets/139/
+Patch3: %{name}.ticket139.patch
 
 %description
 %{upname} (Domain-based Message Authentication, Reporting & Conformance)
@@ -68,11 +78,16 @@ required for developing applications against libopendmarc.
 %prep
 %setup -q
 %if %systemd
-# Apply systemd patches
+# Apply systemd-only patches
 #%patch0 -p1
 %else
-# Apply SysV patches
+# Apply SysV-only patches
 #%patch0 -p1
+# Apply Global patches
+%patch0 -p1
+%patch1 -p1
+%patch2 -p1
+%patch3 -p1
 %endif
 
 %build
@@ -233,6 +248,15 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Mon Apr 11 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-16
+- Added patches for SourceForge tickets 115, 131, 138, 139
+
+* Thu Feb 04 2016 Fedora Release Engineering <releng@fedoraproject.org> - 1.3.1-15
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
+
+* Wed Jun 17 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.3.1-14
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
+
 * Wed Apr 29 2015 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-13
 - Replaced various commands with rpm macros
 - Included support for systemd macros (#1216881)

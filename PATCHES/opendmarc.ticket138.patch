@@ -1,0 +1,45 @@
+Index: opendmarc-code/opendmarc/opendmarc-config.h
+===================================================================
+--- opendmarc-code.orig/opendmarc/opendmarc-config.h	2015-06-29 09:50:43.247001227 -0300
++++ opendmarc-code/opendmarc/opendmarc-config.h	2015-06-29 09:59:37.092292267 -0300
+@@ -32,6 +32,7 @@
+ 	{ "FailureReportsOnNone",	CONFIG_TYPE_BOOLEAN,	FALSE },
+ 	{ "FailureReportsSentBy",	CONFIG_TYPE_STRING,	FALSE },
+ 	{ "HistoryFile",		CONFIG_TYPE_STRING,	FALSE },
++	{ "HoldQuarantinedMessages",    CONFIG_TYPE_BOOLEAN,    FALSE },
+ 	{ "IgnoreAuthenticatedClients",	CONFIG_TYPE_BOOLEAN,	FALSE },
+ 	{ "IgnoreHosts",		CONFIG_TYPE_STRING,	FALSE },
+ 	{ "IgnoreMailFrom",		CONFIG_TYPE_STRING,	FALSE },
+Index: opendmarc-code/opendmarc/opendmarc.c
+===================================================================
+--- opendmarc-code.orig/opendmarc/opendmarc.c	2015-06-29 09:50:43.247001227 -0300
++++ opendmarc-code/opendmarc/opendmarc.c	2015-06-29 09:58:41.148988316 -0300
+@@ -156,6 +156,7 @@
+ 	_Bool			conf_spfselfvalidate;
+ #endif /* WITH_SPF */
+ 	_Bool			conf_ignoreauthclients;
++	_Bool                   conf_holdquarantinedmessages;
+ 	unsigned int		conf_refcnt;
+ 	unsigned int		conf_dnstimeout;
+ 	struct config *		conf_data;
+@@ -1285,6 +1286,10 @@
+ 		                  &conf->conf_recordall,
+ 		                  sizeof conf->conf_recordall);
+ 
++		(void) config_get(data, "HoldQuarantinedMessages",
++				  &conf->conf_holdquarantinedmessages,
++				  sizeof conf->conf_holdquarantinedmessages);
++
+ 		(void) config_get(data, "IgnoreAuthenticatedClients",
+ 		                  &conf->conf_ignoreauthclients,
+ 		                  sizeof conf->conf_ignoreauthclients);
+@@ -2971,7 +2976,8 @@
+ 	  case DMARC_POLICY_QUARANTINE:		/* Explicit quarantine */
+ 		aresult = "fail";
+ 
+-		if (conf->conf_rejectfail && random() % 100 < pct)
++		if (conf->conf_rejectfail && conf->conf_holdquarantinedmessages &&
++		    random() % 100 < pct)
+ 		{
+ 			snprintf(replybuf, sizeof replybuf,
+ 			         "quarantined by DMARC policy for %s",
