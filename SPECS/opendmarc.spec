@@ -1,4 +1,4 @@
-%global systemd (0%{?fedora} && 0%{?fedora} >= 18) || (0%{?rhel} && 0%{?rhel} >= 7)
+%global systemd (0%{?fedora} >= 18) || (0%{?rhel} >= 7)
 %global upname OpenDMARC
 %global bigname OPENDMARC
 
@@ -9,6 +9,18 @@ Release: 17%{?dist}
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar.gz
+
+# https://sourceforge.net/p/opendmarc/tickets/115/
+Patch0: %{name}.ticket115.patch
+
+# https://sourceforge.net/p/opendmarc/tickets/131/
+Patch1: %{name}.ticket131.patch
+
+# https://sourceforge.net/p/opendmarc/tickets/138/
+Patch2: %{name}.ticket138.patch
+
+# https://sourceforge.net/p/opendmarc/tickets/139/
+Patch3: %{name}.ticket139.patch
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
@@ -29,23 +41,11 @@ Requires(postun): initscripts
 %endif
 
 # Required for EL5
-%if 0%{?rhel} && 0%{?rhel} == 5
+%if 0%{?rhel} == 5
 Requires(post): policycoreutils
 %endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-
-# https://sourceforge.net/p/opendmarc/tickets/115/
-Patch0: %{name}.ticket115.patch
-
-# https://sourceforge.net/p/opendmarc/tickets/131/
-Patch1: %{name}.ticket131.patch
-
-# https://sourceforge.net/p/opendmarc/tickets/138/
-Patch2: %{name}.ticket138.patch
-
-# https://sourceforge.net/p/opendmarc/tickets/139/
-Patch3: %{name}.ticket139.patch
 
 %description
 %{upname} (Domain-based Message Authentication, Reporting & Conformance)
@@ -94,7 +94,7 @@ required for developing applications against libopendmarc.
 # properly handle 32 versus 64 bit detection and settings
 %define LIBTOOL LIBTOOL=`which libtool`
 
-%if 0%{?rhel} && 0%{?rhel} == 5
+%if 0%{?rhel} == 5
 %configure --with-sql-backend --with-spf 
 %else
 %configure --with-sql-backend --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
