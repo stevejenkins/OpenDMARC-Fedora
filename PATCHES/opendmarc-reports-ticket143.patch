@@ -1,0 +1,1611 @@
+25a26,27
+> use Net::Domain qw(hostdomain);
+> use Net::DNS;
+50a53
+> my $repfilename;
+51a55
+> my $zipfilename;
+122a127
+> my $def_tmpfolder = "/var/log/opendmarc/temp";
+137c142
+<
+---
+> my $tmpfolder;
+139c144
+<
+---
+> my $resolver = Net::DNS::Resolver->new();
+146,169c151,249
+<       print STDERR "$progname: usage: $progname [options]\n";
+<       print STDERR "\t--day              send yesterday's data\n";
+<       print STDERR "\t--dbhost=host      database host [$def_dbhost]\n";
+<       print STDERR "\t--dbname=name      database name [$def_dbname]\n";
+<       print STDERR "\t--dbpasswd=passwd  database password [$def_dbpasswd]\n";
+<       print STDERR "\t--dbport=port      database port [$def_dbport]\n";
+<       print STDERR "\t--dbuser=user      database user [$def_dbuser]\n";
+<       print STDERR "\t--domain=name      force a report for named domain\n";
+<       print STDERR "\t--help             print help and exit\n";
+<       print STDERR "\t--interval=secs    report interval [$def_interval]\n";
+<       print STDERR "\t--keepfiles        keep xml files (in local directory)\n";
+<       print STDERR "\t -n                synonym for --test\n";
+<       print STDERR "\t--nodomain=name    omit a report for named domain\n";
+<       print STDERR "\t--noupdate         don't record report transmission\n";
+<       print STDERR "\t--report-email     reporting contact [$repemail]\n";
+<       print STDERR "\t--report-org       reporting organization [$repdom]\n";
+<       print STDERR "\t--smtp-port        smtp server port [$smtp_port]\n";
+<       print STDERR "\t--smtp-server      smtp server [$smtp_server]\n";
+<       print STDERR "\t--test             don't send reports\n";
+<       print STDERR "\t--utc              operate in UTC\n";
+<       print STDERR "\t                   (implies --keepfiles --noupdate)\n";
+<       print STDERR "\t--verbose          verbose output\n";
+<       print STDERR "\t                   (repeat for increased output)\n";
+<       print STDERR "\t--version          print version and exit\n";
+---
+>         print STDERR "$progname: usage: $progname [options]\n";
+>         print STDERR "\t--day              send yesterday's data\n";
+>         print STDERR "\t--dbhost=host      database host [$def_dbhost]\n";
+>         print STDERR "\t--dbname=name      database name [$def_dbname]\n";
+>         print STDERR "\t--dbpasswd=passwd  database password [$def_dbpasswd]\n";
+>         print STDERR "\t--dbport=port      database port [$def_dbport]\n";
+>         print STDERR "\t--dbuser=user      database user [$def_dbuser]\n";
+>         print STDERR "\t--domain=name      force a report for named domain\n";
+>         print STDERR "\t--help             print help and exit\n";
+>         print STDERR "\t--interval=secs    report interval [$def_interval]\n";
+>         print STDERR "\t--keepfiles        keep xml files (in local directory)\n";
+>         print STDERR "\t -n                synonym for --test\n";
+>         print STDERR "\t--nodomain=name    omit a report for named domain\n";
+>         print STDERR "\t--noupdate         don't record report transmission\n";
+>         print STDERR "\t--report-email     reporting contact [$repemail]\n";
+>         print STDERR "\t--report-org       reporting organization [$repdom]\n";
+>         print STDERR "\t--smtp-port        smtp server port [$smtp_port]\n";
+>         print STDERR "\t--smtp-server      smtp server [$smtp_server]\n";
+>         print STDERR "\t--tmpfolder=path   temp folder for xml and zip filep server [$def_tmpfolder]\n";
+>         print STDERR "\t--test             don't send reports\n";
+>         print STDERR "\t--utc              operate in UTC\n";
+>         print STDERR "\t                   (implies --keepfiles --noupdate)\n";
+>         print STDERR "\t--verbose          verbose output\n";
+>         print STDERR "\t                   (repeat for increased output)\n";
+>         print STDERR "\t--version          print version and exit\n";
+> }
+>
+> sub isDomainResolvable {
+>   my ($domain)=@_;
+>   my $return=0;
+>   my $dns_query = $resolver->query($domain,"MX");
+>   if ($dns_query) {
+>         $return=1;
+>   }
+>   else {
+>         $dns_query = $resolver->query($domain,"A");
+>         if ($dns_query) {
+>                 $return=1;
+>         }
+>         else {
+>                 $dns_query = $resolver->query($domain,"AAAA");
+>                 if ($dns_query) {
+>                         $return=1;
+>                 }
+>         }
+>   }
+>   return $return;
+> }
+> sub checkDmarcReport {
+>   my ($sendingDomain,$notificationDomain)=@_;
+>   my $return=0;
+>   my $dns_query = $resolver->query("$sendingDomain._report._dmarc.$notificationDomain","TXT");
+>   if ($dns_query) {
+>         foreach my $rr ($dns_query->answer) {
+>                   if ($rr->type eq "TXT" && $rr->txtdata eq "v=DMARC1" ) {$return=1}
+>         }
+>   }
+>   return $return;
+>
+> }
+>
+> sub checkSendingNotificationsAuthorized {
+>   my ($sendingDomain,$notificationAddress)=@_;
+>   my $return=0;
+>   $sendingDomain = lc $sendingDomain;
+>   $notificationAddress = lc $notificationAddress;
+>   $notificationAddress =~ /[@]([^@]*)$/;
+>   my $notificationDomain= $1;
+>   if ( $notificationDomain ) {
+>         if ( isDomainResolvable($notificationDomain) ) {
+>
+>                 if ( ( index($notificationDomain,".$sendingDomain") != -1 ) || ($sendingDomain eq $notificationDomain) || ( index($sendingDomain,".$notificationDomain") != -1 )) {
+>                 #if ( $sendingDomain eq $notificationDomain ) {
+>                         $return=1;
+>                 }
+>                 else {
+>                         $return=checkDmarcReport($sendingDomain,$notificationDomain);
+>                 }
+>         }
+>   }
+>   return $return;
+> }
+>
+> sub updateDB {
+>         my ($domainid) = @_;
+> #       print STDERR "updateDB: $domainid\n";
+>  # update "last sent" timestamp
+>         if ($doupdate)
+>         {
+>                 $dbi_s = $dbi_h->prepare("UPDATE requests SET lastsent = FROM_UNIXTIME(?) WHERE domain = ?");
+>                 if (!$dbi_s->execute($now, $domainid))
+>                 {
+>                         print STDERR "$progname: can't update last sent time for domain $domain: " . $dbi_h->errstr . "\n";
+>                         $dbi_s->finish;
+>                         $dbi_h->disconnect;
+>                         exit(1);
+>                 }
+>         }
+>
+171a252
+>
+191a273
+>                                             'tmpfolder=s' => \$tmpfolder,
+200c282
+<       usage();
+---
+>         usage();
+202,209c284,291
+<       if ($helponly)
+<       {
+<               exit(0);
+<       }
+<       else
+<       {
+<               exit(1);
+<       }
+---
+>         if ($helponly)
+>         {
+>                 exit(0);
+>         }
+>         else
+>         {
+>                 exit(1);
+>         }
+214,215c296,297
+<       print STDOUT "$progname v$version\n";
+<       exit(0);
+---
+>         print STDOUT "$progname v$version\n";
+>         exit(0);
+221,228c303,310
+<       if (defined($ENV{'OPENDMARC_DBHOST'}))
+<       {
+<               $dbhost = $ENV{'OPENDMARC_DBHOST'};
+<       }
+<       else
+<       {
+<               $dbhost = $def_dbhost;
+<       }
+---
+>         if (defined($ENV{'OPENDMARC_DBHOST'}))
+>         {
+>                 $dbhost = $ENV{'OPENDMARC_DBHOST'};
+>         }
+>         else
+>         {
+>                 $dbhost = $def_dbhost;
+>         }
+233,240c315,322
+<       if (defined($ENV{'OPENDMARC_DB'}))
+<       {
+<               $dbname = $ENV{'OPENDMARC_DB'};
+<       }
+<       else
+<       {
+<               $dbname = $def_dbname;
+<       }
+---
+>         if (defined($ENV{'OPENDMARC_DB'}))
+>         {
+>                 $dbname = $ENV{'OPENDMARC_DB'};
+>         }
+>         else
+>         {
+>                 $dbname = $def_dbname;
+>         }
+245,252c327,334
+<       if (defined($ENV{'OPENDMARC_PASSWORD'}))
+<       {
+<               $dbpasswd = $ENV{'OPENDMARC_PASSWORD'};
+<       }
+<       else
+<       {
+<               $dbpasswd = $def_dbpasswd;
+<       }
+---
+>         if (defined($ENV{'OPENDMARC_PASSWORD'}))
+>         {
+>                 $dbpasswd = $ENV{'OPENDMARC_PASSWORD'};
+>         }
+>         else
+>         {
+>                 $dbpasswd = $def_dbpasswd;
+>         }
+257,264c339,346
+<       if (defined($ENV{'OPENDMARC_PORT'}))
+<       {
+<               $dbport = $ENV{'OPENDMARC_PORT'};
+<       }
+<       else
+<       {
+<               $dbport = $def_dbport;
+<       }
+---
+>         if (defined($ENV{'OPENDMARC_PORT'}))
+>         {
+>                 $dbport = $ENV{'OPENDMARC_PORT'};
+>         }
+>         else
+>         {
+>                 $dbport = $def_dbport;
+>         }
+269,276c351,369
+<       if (defined($ENV{'OPENDMARC_USER'}))
+<       {
+<               $dbuser = $ENV{'OPENDMARC_USER'};
+<       }
+<       else
+<       {
+<               $dbuser = $def_dbuser;
+<       }
+---
+>         if (defined($ENV{'OPENDMARC_USER'}))
+>         {
+>                 $dbuser = $ENV{'OPENDMARC_USER'};
+>         }
+>         else
+>         {
+>                 $dbuser = $def_dbuser;
+>         }
+> }
+> if (!defined($tmpfolder))
+> {
+>         if (defined($ENV{'TMPFOLDER'}))
+>         {
+>                 $tmpfolder = $ENV{'TMPFOLDER'};
+>         }
+>         else
+>         {
+>                 $tmpfolder = $def_tmpfolder;
+>         }
+281c374
+<       $interval = $def_interval;
+---
+>         $interval = $def_interval;
+290c383
+<       print STDERR "$progname: started at " . localtime() . "\n";
+---
+>         print STDERR "$progname: started at " . localtime() . "\n";
+299,300c392,393
+<       print STDERR "$progname: unable to connect to database: $DBI::errstr\n";
+<       exit(1);
+---
+>         print STDERR "$progname: unable to connect to database: $DBI::errstr\n";
+>         exit(1);
+305c398
+<       print STDERR "$progname: connected to database\n";
+---
+>         print STDERR "$progname: connected to database\n";
+310c403
+<       $dbi_s = $dbi_h->prepare("SET TIME_ZONE='+00:00'");
+---
+>         $dbi_s = $dbi_h->prepare("SET TIME_ZONE='+00:00'");
+312,318c405,411
+<       if (!$dbi_s->execute())
+<       {
+<               print STDERR "$progname: failed to change to UTC: " . $dbi_h->errstr . "\n";
+<               $dbi_s->finish;
+<               $dbi_h->disconnect;
+<               exit(1);
+<       }
+---
+>         if (!$dbi_s->execute())
+>         {
+>                 print STDERR "$progname: failed to change to UTC: " . $dbi_h->errstr . "\n";
+>                 $dbi_s->finish;
+>                 $dbi_h->disconnect;
+>                 exit(1);
+>         }
+329c422
+<       print STDERR "$progname: selecting target domains\n";
+---
+>         print STDERR "$progname: selecting target domains\n";
+334c427
+<       $dbi_s = $dbi_h->prepare("SELECT name FROM domains WHERE name = ?");
+---
+>         $dbi_s = $dbi_h->prepare("SELECT name FROM domains WHERE name = ?");
+336,342c429,435
+<       if (!$dbi_s->execute($forcedomain))
+<       {
+<               print STDERR "$progname: failed to test for database entry: " . $dbi_h->errstr . "\n";
+<               $dbi_s->finish;
+<               $dbi_h->disconnect;
+<               exit(1);
+<       }
+---
+>         if (!$dbi_s->execute($forcedomain))
+>         {
+>                 print STDERR "$progname: failed to test for database entry: " . $dbi_h->errstr . "\n";
+>                 $dbi_s->finish;
+>                 $dbi_h->disconnect;
+>                 exit(1);
+>         }
+346c439
+<       $dbi_s = $dbi_h->prepare("SELECT domains.name FROM requests JOIN domains ON requests.domain = domains.id WHERE DATE(lastsent) < DATE(FROM_UNIXTIME(?))");
+---
+>         $dbi_s = $dbi_h->prepare("SELECT domains.name FROM requests JOIN domains ON requests.domain = domains.id WHERE DATE(lastsent) < DATE(FROM_UNIXTIME(?))");
+348,354c441,447
+<       if (!$dbi_s->execute($now))
+<       {
+<               print STDERR "$progname: failed to collect domain names: " . $dbi_h->errstr . "\n";
+<               $dbi_s->finish;
+<               $dbi_h->disconnect;
+<               exit(1);
+<       }
+---
+>         if (!$dbi_s->execute($now))
+>         {
+>                 print STDERR "$progname: failed to collect domain names: " . $dbi_h->errstr . "\n";
+>                 $dbi_s->finish;
+>                 $dbi_h->disconnect;
+>                 exit(1);
+>         }
+358c451
+<       $dbi_s = $dbi_h->prepare("SELECT domains.name FROM requests JOIN domains ON requests.domain = domains.id WHERE lastsent <= DATE_SUB(FROM_UNIXTIME(?), INTERVAL ? SECOND)");
+---
+>         $dbi_s = $dbi_h->prepare("SELECT domains.name FROM requests JOIN domains ON requests.domain = domains.id WHERE lastsent <= DATE_SUB(FROM_UNIXTIME(?), INTERVAL ? SECOND)");
+360,366c453,459
+<       if (!$dbi_s->execute($now, $interval))
+<       {
+<               print STDERR "$progname: failed to collect domain names: " . $dbi_h->errstr . "\n";
+<               $dbi_s->finish;
+<               $dbi_h->disconnect;
+<               exit(1);
+<       }
+---
+>         if (!$dbi_s->execute($now, $interval))
+>         {
+>                 print STDERR "$progname: failed to collect domain names: " . $dbi_h->errstr . "\n";
+>                 $dbi_s->finish;
+>                 $dbi_h->disconnect;
+>                 exit(1);
+>         }
+374c467
+<       print STDERR "$progname: selected " . scalar(@$domainset) . " domain(s)\n";
+---
+>         print STDERR "$progname: selected " . scalar(@$domainset) . " domain(s)\n";
+379,382c472,475
+< #     -- extract reporting address
+< #     -- extract messages/signatures to report
+< #     -- generate and send report
+< #     -- update "last sent" timestamp
+---
+> #       -- extract reporting address
+> #       -- extract messages/signatures to report
+> #       -- generate and send report
+> #       -- update "last sent" timestamp
+385,393d477
+< $smtp = Net::SMTP->new($smtp_server,
+<                        'Port' => $smtp_port,
+<                        'Helo' => hostfqdn());
+< if (!defined($smtp))
+< {
+<       print STDERR "$progname: open SMTP server $smtp_server:$smtp_port failed\n";
+<       exit(1);
+< }
+<
+396c480
+<       $domain = $_->[0];
+---
+>         $domain = $_->[0];
+398,973c482,1097
+<       if (!defined($domain))
+<       {
+<               next;
+<       }
+<
+<       if (@skipdomains && grep({$_ eq $domain} @skipdomains) != 0)
+<       {
+<               next;
+<       }
+<
+<       if ($verbose >= 2)
+<       {
+<               print STDERR "$progname: processing $domain\n";
+<       }
+<
+<       # extract this domain's reporting parameters
+<       $dbi_s = $dbi_h->prepare("SELECT id FROM domains WHERE name = ?");
+<       if (!$dbi_s->execute($domain))
+<       {
+<               print STDERR "$progname: can't get ID for domain $domain: " . $dbi_h->errstr . "\n";
+<               $dbi_s->finish;
+<               $dbi_h->disconnect;
+<               exit(1);
+<       }
+<
+<       undef $domainid;
+<       while ($dbi_a = $dbi_s->fetchrow_arrayref())
+<       {
+<               if (defined($dbi_a->[0]))
+<               {
+<                       $domainid = $dbi_a->[0];
+<               }
+<       }
+<       $dbi_s->finish;
+<
+<       if (!defined($domainid))
+<       {
+<               print STDERR "$progname: ID for domain $domain not found\n";
+<               next;
+<       }
+<
+<       $dbi_s = $dbi_h->prepare("SELECT repuri, adkim, aspf, policy, spolicy, pct, UNIX_TIMESTAMP(lastsent) FROM requests WHERE domain = ?");
+<       if (!$dbi_s->execute($domainid))
+<       {
+<               print STDERR "$progname: can't get reporting URI for domain $domain: " . $dbi_h->errstr . "\n";
+<               $dbi_s->finish;
+<               $dbi_h->disconnect;
+<               exit(1);
+<       }
+<
+<       undef $repuri;
+<
+<       while ($dbi_a = $dbi_s->fetchrow_arrayref())
+<       {
+<               if (defined($dbi_a->[0]))
+<               {
+<                       $repuri = $dbi_a->[0];
+<               }
+<               if (defined($dbi_a->[1]))
+<               {
+<                       $adkim = $dbi_a->[1];
+<               }
+<               if (defined($dbi_a->[2]))
+<               {
+<                       $aspf = $dbi_a->[2];
+<               }
+<               if (defined($dbi_a->[3]))
+<               {
+<                       $policy = $dbi_a->[3];
+<               }
+<               if (defined($dbi_a->[4]))
+<               {
+<                       $spolicy = $dbi_a->[4];
+<               }
+<               if (defined($dbi_a->[5]))
+<               {
+<                       $pct = $dbi_a->[5];
+<               }
+<               if (defined($dbi_a->[6]))
+<               {
+<                       $lastsent = $dbi_a->[6];
+<               }
+<       }
+<
+<       $dbi_s->finish;
+<
+<       if (!defined($repuri) || ("" eq $repuri))
+<       {
+<               if ($verbose >= 2)
+<               {
+<                       print STDERR "$progname: no reporting URI for domain $domain; skipping\n";
+<               }
+<
+<               next;
+<       }
+<
+<       # construct the temporary file
+<       $repfile = $repdom . "!" . $domain . "!" . $lastsent . "!" . time() . ".xml";
+<       $zipfile = $repdom . "!" . $domain . "!" . $lastsent . "!" . time() . ".zip";
+<       if (!open($tmpout, ">", $repfile))
+<       {
+<               print STDERR "$progname: can't create report file for domain $domain\n";
+<               next;
+<       }
+<
+<       switch ($adkim)
+<       {
+<               case ord("r")   { $adkimstr = "r"; }
+<               case ord("s")   { $adkimstr = "s"; }
+<               else            { $adkimstr = "unknown"; }
+<       }
+<
+<       switch ($aspf)
+<       {
+<               case ord("r")   { $aspfstr = "r"; }
+<               case ord("s")   { $aspfstr = "s"; }
+<               else            { $aspfstr = "unknown"; }
+<       }
+<
+<       switch ($policy)
+<       {
+<               case ord("n")   { $policystr = "none"; }
+<               case ord("q")   { $policystr = "quarantine"; }
+<               case ord("r")   { $policystr = "reject"; }
+<               else            { $policystr = "unknown"; }
+<       }
+<
+<       switch ($spolicy)
+<       {
+<               case ord("n")   { $spolicystr = "none"; }
+<               case ord("q")   { $spolicystr = "quarantine"; }
+<               case ord("r")   { $spolicystr = "reject"; }
+<       }
+<
+<       if ($daybound)
+<       {
+<               $dbi_s = $dbi_h->prepare("SELECT UNIX_TIMESTAMP(MIN(date)), UNIX_TIMESTAMP(MAX(date)) FROM messages WHERE from_domain = ? AND DATE(date) >= DATE(FROM_UNIXTIME(?)) AND DATE(date) < DATE(FROM_UNIXTIME(?))");
+<       }
+<       else
+<       {
+<               $dbi_s = $dbi_h->prepare("SELECT UNIX_TIMESTAMP(MIN(date)), UNIX_TIMESTAMP(MAX(date)) FROM messages WHERE from_domain = ? AND UNIX_TIMESTAMP(date) > ? AND UNIX_TIMESTAMP(date) <= ?");
+<       }
+<
+<       if (!$dbi_s->execute($domainid, $lastsent, $now))
+<       {
+<               print STDERR "$progname: can't extract begin/end times for domain $domain: " . $dbi_h->errstr . "\n";
+<               $dbi_s->finish;
+<               $dbi_h->disconnect;
+<               exit(1);
+<       }
+<
+<       $repstart = 0;
+<       $repend = $now;
+<
+<       while ($dbi_a = $dbi_s->fetchrow_arrayref())
+<       {
+<               if (defined($dbi_a->[0]))
+<               {
+<                       $repstart = $dbi_a->[0];
+<               }
+<               if (defined($dbi_a->[1]))
+<               {
+<                       $repend = $dbi_a->[1];
+<               }
+<       }
+<
+<       $dbi_s->finish;
+<
+<       print $tmpout "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n";
+<       print $tmpout "<feedback>\n";
+<
+<       print $tmpout " <report_metadata>\n";
+<       print $tmpout "  <org_name>$repdom</org_name>\n";
+<       print $tmpout "  <email>$repemail</email>\n";
+<       print $tmpout "  <report_id>$domain:$now</report_id>\n";
+<       print $tmpout "  <date_range>\n";
+<       print $tmpout "   <begin>$repstart</begin>\n";
+<       print $tmpout "   <end>$repend</end>\n";
+<       print $tmpout "  </date_range>\n";
+<       print $tmpout " </report_metadata>\n";
+<
+<       print $tmpout " <policy_published>\n";
+<       print $tmpout "  <domain>$domain</domain>\n";
+<       print $tmpout "  <adkim>$adkimstr</adkim>\n";
+<       print $tmpout "  <aspf>$aspfstr</aspf>\n";
+<       print $tmpout "  <p>$policystr</p>\n";
+<       if (defined($spolicystr))
+<       {
+<               print $tmpout "  <sp>$spolicystr</sp>\n";
+<       }
+<       print $tmpout "  <pct>$pct</pct>\n";
+<       print $tmpout " </policy_published>\n";
+<
+<       if ($daybound)
+<       {
+<               $dbi_s = $dbi_h->prepare("SELECT messages.id, ipaddr.addr, messages.disp, d1.name, d2.name, messages.spf, messages.align_spf, messages.align_dkim FROM messages JOIN ipaddr ON messages.ip = ipaddr.id JOIN domains d1 ON messages.from_domain = d1.id JOIN domains d2 ON messages.env_domain = d2.id WHERE messages.from_domain = ? AND DATE(messages.date) >= DATE(FROM_UNIXTIME(?)) AND DATE(messages.date) < DATE(FROM_UNIXTIME(?))");
+<       }
+<       else
+<       {
+<               $dbi_s = $dbi_h->prepare("SELECT messages.id, ipaddr.addr, messages.disp, d1.name, d2.name, messages.spf, messages.align_spf, messages.align_dkim FROM messages JOIN ipaddr ON messages.ip = ipaddr.id JOIN domains d1 ON messages.from_domain = d1.id JOIN domains d2 ON messages.env_domain = d2.id WHERE messages.from_domain = ? AND messages.date > FROM_UNIXTIME(?) AND messages.date <= FROM_UNIXTIME(?)");
+<       }
+<
+<       if (!$dbi_s->execute($domainid, $lastsent, $now))
+<       {
+<               print STDERR "$progname: can't extract report for domain $domain: " . $dbi_h->errstr . "\n";
+<               $dbi_s->finish;
+<               $dbi_h->disconnect;
+<               exit(1);
+<       }
+<
+<       $rowcount = 0;
+<
+<       while ($dbi_a = $dbi_s->fetchrow_arrayref())
+<       {
+<               undef $msgid;
+<
+<               if (defined($dbi_a->[0]))
+<               {
+<                       $msgid = $dbi_a->[0];
+<               }
+<               if (defined($dbi_a->[1]))
+<               {
+<                       $ipaddr = $dbi_a->[1];
+<               }
+<               if (defined($dbi_a->[2]))
+<               {
+<                       $disp = $dbi_a->[2];
+<               }
+<               if (defined($dbi_a->[3]))
+<               {
+<                       $fromdomain = $dbi_a->[3];
+<               }
+<               if (defined($dbi_a->[4]))
+<               {
+<                       $envdomain = $dbi_a->[4];
+<               }
+<               if (defined($dbi_a->[5]))
+<               {
+<                       $spfresult = $dbi_a->[5];
+<               }
+<               if (defined($dbi_a->[6]))
+<               {
+<                       $align_spf = $dbi_a->[6];
+<               }
+<               if (defined($dbi_a->[7]))
+<               {
+<                       $align_dkim = $dbi_a->[7];
+<               }
+<
+<               if (!defined($msgid))
+<               {
+<                       next;
+<               }
+<
+<               $rowcount++;
+<
+<               switch ($disp)
+<               {
+<                       case 0  { $dispstr = "reject"; }
+<                       case 1  { $dispstr = "reject"; }
+<                       case 2  { $dispstr = "none"; }
+<                       case 4  { $dispstr = "quarantine"; }
+<                       else    { $dispstr = "unknown"; }
+<               }
+<
+<               switch ($spfresult)
+<               {
+<                       case 0  { $spfresultstr = "pass"; }
+<                       case 2  { $spfresultstr = "softfail"; }
+<                       case 3  { $spfresultstr = "neutral"; }
+<                       case 4  { $spfresultstr = "temperror"; }
+<                       case 5  { $spfresultstr = "permerror"; }
+<                       case 6  { $spfresultstr = "none"; }
+<                       case 7  { $spfresultstr = "fail"; }
+<                       case 8  { $spfresultstr = "policy"; }
+<                       case 9  { $spfresultstr = "nxdomain"; }
+<                       case 10 { $spfresultstr = "signed"; }
+<                       case 12 { $spfresultstr = "discard"; }
+<                       else    { $spfresultstr = "unknown"; }
+<               }
+<
+<               switch ($align_dkim)
+<               {
+<                       case 4  { $align_dkimstr = "pass"; }
+<                       case 5  { $align_dkimstr = "fail"; }
+<                       else    { $align_dkimstr = "unknown"; }
+<               }
+<
+<               switch ($align_spf)
+<               {
+<                       case 4  { $align_spfstr = "pass"; }
+<                       case 5  { $align_spfstr = "fail"; }
+<                       else    { $align_spfstr = "unknown"; }
+<               }
+<
+<               print $tmpout " <record>\n";
+<               print $tmpout "  <row>\n";
+<               print $tmpout "   <source_ip>$ipaddr</source_ip>\n";
+<               print $tmpout "   <count>1</count>\n";
+<               print $tmpout "   <policy_evaluated>\n";
+<               print $tmpout "    <disposition>$dispstr</disposition>\n";
+<               print $tmpout "    <dkim>$align_dkimstr</dkim>\n";
+<               print $tmpout "    <spf>$align_spfstr</spf>\n";
+<               print $tmpout "   </policy_evaluated>\n";
+<               print $tmpout "  </row>\n";
+<               print $tmpout "  <identifiers>\n";
+<               print $tmpout "   <header_from>$fromdomain</header_from>\n";
+<               print $tmpout "  </identifiers>\n";
+<               print $tmpout "  <auth_results>\n";
+<               print $tmpout "   <spf>\n";
+<               print $tmpout "    <domain>$envdomain</domain>\n";
+<               print $tmpout "    <result>$spfresultstr</result>\n";
+<               print $tmpout "   </spf>\n";
+<
+<               $dbi_d = $dbi_h->prepare("SELECT domains.name, pass FROM signatures JOIN domains ON signatures.domain = domains.id WHERE signatures.message = ?");
+<               if (!$dbi_d->execute($msgid))
+<               {
+<                       print STDERR "$progname: can't extract report for message $msgid: " . $dbi_h->errstr . "\n";
+<                       $dbi_s->finish;
+<                       $dbi_d->finish;
+<                       $dbi_h->disconnect;
+<                       exit(1);
+<               }
+<
+<               while ($dbi_a = $dbi_d->fetchrow_arrayref())
+<               {
+<                       undef $dkimdomain;
+<
+<                       if (defined($dbi_a->[0]))
+<                       {
+<                               $dkimdomain = $dbi_a->[0];
+<                       }
+<                       if (defined($dbi_a->[1]))
+<                       {
+<                               $dkimresult = $dbi_a->[1];
+<                       }
+<
+<
+<                       if (!defined($dkimdomain))
+<                       {
+<                               next;
+<                       }
+<
+<                       switch ($dkimresult)
+<                       {
+<                               case 0  { $dkimresultstr = "pass"; }
+<                               case 2  { $dkimresultstr = "softfail"; }
+<                               case 3  { $dkimresultstr = "neutral"; }
+<                               case 4  { $dkimresultstr = "temperror"; }
+<                               case 5  { $dkimresultstr = "permerror"; }
+<                               case 6  { $dkimresultstr = "none"; }
+<                               case 7  { $dkimresultstr = "fail"; }
+<                               case 8  { $dkimresultstr = "policy"; }
+<                               case 9  { $dkimresultstr = "nxdomain"; }
+<                               case 10 { $dkimresultstr = "signed"; }
+<                               case 12 { $dkimresultstr = "discard"; }
+<                               else    { $dkimresultstr = "unknown"; }
+<                       }
+<
+<                       print $tmpout "   <dkim>\n";
+<                       print $tmpout "    <domain>$dkimdomain</domain>\n";
+<                       print $tmpout "    <result>$dkimresultstr</result>\n";
+<                       print $tmpout "   </dkim>\n";
+<               }
+<
+<               $dbi_d->finish;
+<
+<               print $tmpout "  </auth_results>\n";
+<               print $tmpout " </record>\n";
+<       }
+<
+<       $dbi_s->finish;
+<
+<       print $tmpout "</feedback>\n";
+<
+<       close($tmpout);
+<
+<       if ($rowcount == 0)
+<       {
+<               if ($verbose >= 2)
+<               {
+<                       print STDERR "$progname: no activity selected for $domain; skipping\n";
+<               }
+<
+<               unlink($repfile);
+<               next;
+<       }
+<
+<       # zip the report
+<       if (!zip [ $repfile ] => $zipfile)
+<       {
+<               print STDERR "$progname: can't zip report for domain $domain: $!\n";
+<               next;
+<       }
+<
+<       if ($keepfiles)
+<       {
+<               print STDERR "$progname: keeping report file \"$repfile\"\n";
+<       }
+<
+<       # decode the URI
+<       @repuris = split(',', $repuri);
+<
+<       for $repuri (@repuris)
+<       {
+<               $uri = URI->new($repuri);
+<               if (!defined($uri) ||
+<                   !defined($uri->scheme) ||
+<                   $uri->opaque eq "")
+<               {
+<                       print STDERR "$progname: can't parse reporting URI for domain $domain\n";
+<                       unlink($zipfile);
+<                       unlink($repfile);
+<                       next;
+<               }
+<
+<               $repdest = $uri->opaque;
+<               my $report_maxbytes = $report_maxbytes_global;
+<
+<               # check for max report size
+<               if ($repdest =~ m/^(\S+)!(\d{1,15})([kmgt])?$/i)
+<               {
+<                       $repdest = $1;
+<                       $report_maxbytes = $2;
+<                       if ($3)
+<                       {
+<                               my $letter = lc($3);
+<                               if ($letter eq 'k')
+<                               {
+<                                       $report_maxbytes = $report_maxbytes * 1024;
+<                               }
+<                               if ($letter eq 'm')
+<                               {
+<                                       $report_maxbytes = $report_maxbytes * 1048576;
+<                               }
+<                               if ($letter eq 'g')
+<                               {
+<                                       $report_maxbytes = $report_maxbytes * (2**30);
+<                               }
+<                               if ($letter eq 't')
+<                               {
+<                                       $report_maxbytes = $report_maxbytes * (2**40);
+<                               }
+<                       }
+<               }
+<
+<               # Test mode, just report what would have been done
+<               if ($testmode)
+<               {
+<                       print STDERR "$progname: would email $domain report for " .
+<                                    "$rowcount records to " .  $uri->opaque . "\n";
+<               }
+<               # ensure a scheme is present
+<               elsif (!defined($uri->scheme))
+<               {
+<                       if ($verbose >= 2)
+<                       {
+<                               print STDERR "$progname: unknown URI scheme in '$repuri' for domain $domain\n";
+<                       }
+<
+<                       unlink($zipfile);
+<                       unlink($repfile);
+<                       next;
+<               }
+<               # send/post report
+<               elsif ($uri->scheme eq "mailto")
+<               {
+<                       my $datestr;
+<                       my $report_id;
+<
+<                       if (!open($zipin, $zipfile))
+<                       {
+<                               print STDERR "$progname: can't read zipped report for $domain: $!\n";
+<                               unlink($zipfile);
+<                               unlink($repfile);
+<                               next;
+<                       }
+<
+<                       $boundary = "report_section";
+<
+<                       $report_id = $domain . "-" . $now . "@" . $repdom;
+<                       $datestr = strftime("%a, %e %b %Y %H:%M:%S %z (%Z)",
+<                                           localtime);
+<
+<                       $mailout  = "To: $repdest\n";
+<                       $mailout .= "From: $repemail\n";
+<                       $mailout .= "Subject: Report Domain: " . $domain . " Submitter: " . $repdom . " Report-ID: " . $report_id . "\n";
+<                       $mailout .= "X-Mailer: " . $progname . " v" . $version ."\n";
+<                       $mailout .= "Date: " . $datestr . "\n";
+<                       $mailout .= "Message-ID: <$report_id>\n";
+<                       $mailout .= "Auto-Submitted: auto-generated\n";
+<                       $mailout .= "MIME-Version: 1.0\n";
+<                       $mailout .= "Content-Type: multipart/mixed; boundary=\"$boundary\"\n";
+<                       $mailout .= "\n";
+<                       $mailout .= "This is a MIME-encapsulated message.\n";
+<                       $mailout .= "\n";
+<                       $mailout .= "--$boundary\n";
+<                       $mailout .= "Content-Type: text/plain;\n";
+<                       $mailout .= "\n";
+<                       $mailout .= "This is a DMARC aggregate report for $domain\n";
+<                       $mailout .= "generated at " . localtime() . "\n";
+<                       $mailout .= "\n";
+<                       $mailout .= "--$boundary\n";
+<                       $mailout .= "Content-Type: application/zip\n";
+<                       $mailout .= "Content-Disposition: attachment; filename=\"$zipfile\"\n";
+<                       $mailout .= "Content-Transfer-Encoding: base64\n";
+<                       $mailout .= "\n";
+<
+<                       while (read($zipin, $buf, 60*57))
+<                       {
+<                               $mailout .= encode_base64($buf);
+<                       }
+<
+<                       $mailout .= "\n";
+<                       $mailout .= "--$boundary--\n";
+<                       my $reportsize = length($mailout);
+<
+<                       if ($reportsize > $report_maxbytes)
+<                       {
+<                               # XXX -- generate an error report here
+<                               print STDERR "$progname: report was too large ($reportsize bytes) per limitation of URI " . $uri->opaque . " for domain $domain\n";
+<                       }
+<                       else
+<                       {
+<                               $smtpstatus = "sent";
+<                               $smtpfail = 0;
+<                               if (!$smtp->mail($repemail) ||
+<                                   !$smtp->to($repdest) ||
+<                                   !$smtp->data() ||
+<                                   !$smtp->datasend($mailout) ||
+<                                   !$smtp->dataend())
+<                               {
+<                                       $smtpfail = 1;
+<                                       $smtpstatus = "failed to send";
+<                               }
+<
+<                               if ($verbose || $smtpfail)
+<                               {
+<                                       # now perl voodoo:
+<                                       $answer = ${${*$smtp}{'net_cmd_resp'}}[1];
+<                                       chomp($answer);
+<                                       print STDERR "$progname: $smtpstatus report for $domain to $repdest ($answer)\n";
+<                               }
+<                       }
+<
+<                       $smtp->reset();
+<
+<                       close($zipin);
+<               }
+<               else
+<               {
+<                       print STDERR "$progname: unsupported reporting URI scheme " . $uri->scheme . " for domain $domain\n";
+<                       unlink($zipfile);
+<                       unlink($repfile);
+<                       next;
+<               }
+<       }
+<
+<       # update "last sent" timestamp
+<       if ($doupdate)
+<       {
+<               $dbi_s = $dbi_h->prepare("UPDATE requests SET lastsent = FROM_UNIXTIME(?) WHERE domain = ?");
+<               if (!$dbi_s->execute($now, $domainid))
+<               {
+<                       print STDERR "$progname: can't update last sent time for domain $domain: " . $dbi_h->errstr . "\n";
+<                       $dbi_s->finish;
+<                       $dbi_h->disconnect;
+<                       exit(1);
+<               }
+<       }
+<
+<       unlink($zipfile);
+<       if (!$keepfiles)
+<       {
+<               unlink($repfile);
+<       }
+---
+>         if (!defined($domain))
+>         {
+>                 next;
+>         }
+>
+>         if (@skipdomains && grep({$_ eq $domain} @skipdomains) != 0)
+>         {
+>                 next;
+>         }
+>
+>         if ($verbose >= 2)
+>         {
+>                 print STDERR "$progname: processing $domain\n";
+>         }
+>
+>         # extract this domain's reporting parameters
+>         $dbi_s = $dbi_h->prepare("SELECT id FROM domains WHERE name = ?");
+>         if (!$dbi_s->execute($domain))
+>         {
+>                 print STDERR "$progname: can't get ID for domain $domain: " . $dbi_h->errstr . "\n";
+>                 $dbi_s->finish;
+>                 $dbi_h->disconnect;
+>                 exit(1);
+>         }
+>
+>         undef $domainid;
+>         while ($dbi_a = $dbi_s->fetchrow_arrayref())
+>         {
+>                 if (defined($dbi_a->[0]))
+>                 {
+>                         $domainid = $dbi_a->[0];
+>                 }
+>         }
+>         $dbi_s->finish;
+>
+>         if (!defined($domainid))
+>         {
+>                 print STDERR "$progname: ID for domain $domain not found\n";
+>                 next;
+>         }
+>
+>         $dbi_s = $dbi_h->prepare("SELECT repuri, adkim, aspf, policy, spolicy, pct, UNIX_TIMESTAMP(lastsent) FROM requests WHERE domain = ?");
+>         if (!$dbi_s->execute($domainid))
+>         {
+>                 print STDERR "$progname: can't get reporting URI for domain $domain: " . $dbi_h->errstr . "\n";
+>                 $dbi_s->finish;
+>                 $dbi_h->disconnect;
+>                 exit(1);
+>         }
+>
+>         undef $repuri;
+>
+>         while ($dbi_a = $dbi_s->fetchrow_arrayref())
+>         {
+>                 if (defined($dbi_a->[0]))
+>                 {
+>                         $repuri = $dbi_a->[0];
+>                 }
+>                 if (defined($dbi_a->[1]))
+>                 {
+>                         $adkim = $dbi_a->[1];
+>                 }
+>                 if (defined($dbi_a->[2]))
+>                 {
+>                         $aspf = $dbi_a->[2];
+>                 }
+>                 if (defined($dbi_a->[3]))
+>                 {
+>                         $policy = $dbi_a->[3];
+>                 }
+>                 if (defined($dbi_a->[4]))
+>                 {
+>                         $spolicy = $dbi_a->[4];
+>                 }
+>                 if (defined($dbi_a->[5]))
+>                 {
+>                         $pct = $dbi_a->[5];
+>                 }
+>                 if (defined($dbi_a->[6]))
+>                 {
+>                         $lastsent = $dbi_a->[6];
+>                 }
+>         }
+>
+>         $dbi_s->finish;
+>
+>         if (!defined($repuri) || ("" eq $repuri))
+>         {
+>                 if ($verbose >= 2)
+>                 {
+>                         print STDERR "$progname: no reporting URI for domain $domain; skipping\n";
+>                 }
+>                 updateDB($domainid);
+>                 next;
+>         }
+>
+>         # construct the temporary file
+>         if ( $domain =~ /\// || $domain =~ /\.\./ ) {
+>                 print STDERR "$progname: can't create report file for domain $domain due to invalid characters in domain name\n";
+>                 updateDB($domainid);
+>                 next;
+>         }
+>         if ( $repdom =~ /\// || $repdom =~ /\.\./ ) {
+>                 print STDERR "$progname: can't create report file for repdom $repdom due to invalid characters in domain name\n";
+>                 updateDB($domainid);
+>                 next;
+>         }
+>         $repfilename = $repdom . "!" . $domain . "!" . $lastsent . "!" . time() . ".xml";
+>         $repfile = $tmpfolder . "/" .  $repfilename;
+>         $zipfilename = $repdom . "!" . $domain . "!" . $lastsent . "!" . time() . ".zip";
+>         $zipfile = $tmpfolder . "/" . $zipfilename;
+>         if (!open($tmpout, ">", $repfile))
+>         {
+>                 print STDERR "$progname: can't create report file for domain $domain. Repfile: $repfile\n";
+>                 next;
+>         }
+>
+>         switch ($adkim)
+>         {
+>                 case ord("r")   { $adkimstr = "r"; }
+>                 case ord("s")   { $adkimstr = "s"; }
+>                 else            { $adkimstr = "unknown"; }
+>         }
+>
+>         switch ($aspf)
+>         {
+>                 case ord("r")   { $aspfstr = "r"; }
+>                 case ord("s")   { $aspfstr = "s"; }
+>                 else            { $aspfstr = "unknown"; }
+>         }
+>
+>         switch ($policy)
+>         {
+>                 case ord("n")   { $policystr = "none"; }
+>                 case ord("q")   { $policystr = "quarantine"; }
+>                 case ord("r")   { $policystr = "reject"; }
+>                 else            { $policystr = "unknown"; }
+>         }
+>
+>         switch ($spolicy)
+>         {
+>                 case ord("n")   { $spolicystr = "none"; }
+>                 case ord("q")   { $spolicystr = "quarantine"; }
+>                 case ord("r")   { $spolicystr = "reject"; }
+>         }
+>
+>         if ($daybound)
+>         {
+>                 $dbi_s = $dbi_h->prepare("SELECT UNIX_TIMESTAMP(MIN(date)), UNIX_TIMESTAMP(MAX(date)) FROM messages WHERE from_domain = ? AND DATE(date) >= DATE(FROM_UNIXTIME(?)) AND DATE(date) < DATE(FROM_UNIXTIME(?))");
+>         }
+>         else
+>         {
+>                 $dbi_s = $dbi_h->prepare("SELECT UNIX_TIMESTAMP(MIN(date)), UNIX_TIMESTAMP(MAX(date)) FROM messages WHERE from_domain = ? AND UNIX_TIMESTAMP(date) > ? AND UNIX_TIMESTAMP(date) <= ?");
+>         }
+>
+>         if (!$dbi_s->execute($domainid, $lastsent, $now))
+>         {
+>                 print STDERR "$progname: can't extract begin/end times for domain $domain: " . $dbi_h->errstr . "\n";
+>                 $dbi_s->finish;
+>                 $dbi_h->disconnect;
+>                 exit(1);
+>         }
+>
+>         $repstart = 0;
+>         $repend = $now;
+>
+>         while ($dbi_a = $dbi_s->fetchrow_arrayref())
+>         {
+>                 if (defined($dbi_a->[0]))
+>                 {
+>                         $repstart = $dbi_a->[0];
+>                 }
+>                 if (defined($dbi_a->[1]))
+>                 {
+>                         $repend = $dbi_a->[1];
+>                 }
+>         }
+>
+>         $dbi_s->finish;
+>
+>         print $tmpout "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n";
+>         print $tmpout "<feedback>\n";
+>
+>         print $tmpout " <report_metadata>\n";
+>         print $tmpout "  <org_name>$repdom</org_name>\n";
+>         print $tmpout "  <email>$repemail</email>\n";
+>         print $tmpout "  <report_id>$domain:$now</report_id>\n";
+>         print $tmpout "  <date_range>\n";
+>         print $tmpout "   <begin>$repstart</begin>\n";
+>         print $tmpout "   <end>$repend</end>\n";
+>         print $tmpout "  </date_range>\n";
+>         print $tmpout " </report_metadata>\n";
+>
+>         print $tmpout " <policy_published>\n";
+>         print $tmpout "  <domain>$domain</domain>\n";
+>         print $tmpout "  <adkim>$adkimstr</adkim>\n";
+>         print $tmpout "  <aspf>$aspfstr</aspf>\n";
+>         print $tmpout "  <p>$policystr</p>\n";
+>         if (defined($spolicystr))
+>         {
+>                 print $tmpout "  <sp>$spolicystr</sp>\n";
+>         }
+>         print $tmpout "  <pct>$pct</pct>\n";
+>         print $tmpout " </policy_published>\n";
+>
+>         if ($daybound)
+>         {
+>                 $dbi_s = $dbi_h->prepare("SELECT messages.id, ipaddr.addr, messages.disp, d1.name, d2.name, messages.spf, messages.align_spf, messages.align_dkim FROM messages JOIN ipaddr ON messages.ip = ipaddr.id JOIN domains d1 ON messages.from_domain = d1.id JOIN domains d2 ON messages.env_domain = d2.id WHERE messages.from_domain = ? AND DATE(messages.date) >= DATE(FROM_UNIXTIME(?)) AND DATE(messages.date) < DATE(FROM_UNIXTIME(?))");
+>         }
+>         else
+>         {
+>                 $dbi_s = $dbi_h->prepare("SELECT messages.id, ipaddr.addr, messages.disp, d1.name, d2.name, messages.spf, messages.align_spf, messages.align_dkim FROM messages JOIN ipaddr ON messages.ip = ipaddr.id JOIN domains d1 ON messages.from_domain = d1.id JOIN domains d2 ON messages.env_domain = d2.id WHERE messages.from_domain = ? AND messages.date > FROM_UNIXTIME(?) AND messages.date <= FROM_UNIXTIME(?)");
+>         }
+>
+>         if (!$dbi_s->execute($domainid, $lastsent, $now))
+>         {
+>                 print STDERR "$progname: can't extract report for domain $domain: " . $dbi_h->errstr . "\n";
+>                 $dbi_s->finish;
+>                 $dbi_h->disconnect;
+>                 exit(1);
+>         }
+>
+>         $rowcount = 0;
+>
+>         while ($dbi_a = $dbi_s->fetchrow_arrayref())
+>         {
+>                 undef $msgid;
+>
+>                 if (defined($dbi_a->[0]))
+>                 {
+>                         $msgid = $dbi_a->[0];
+>                 }
+>                 if (defined($dbi_a->[1]))
+>                 {
+>                         $ipaddr = $dbi_a->[1];
+>                 }
+>                 if (defined($dbi_a->[2]))
+>                 {
+>                         $disp = $dbi_a->[2];
+>                 }
+>                 if (defined($dbi_a->[3]))
+>                 {
+>                         $fromdomain = $dbi_a->[3];
+>                 }
+>                 if (defined($dbi_a->[4]))
+>                 {
+>                         $envdomain = $dbi_a->[4];
+>                 }
+>                 if (defined($dbi_a->[5]))
+>                 {
+>                         $spfresult = $dbi_a->[5];
+>                 }
+>                 if (defined($dbi_a->[6]))
+>                 {
+>                         $align_spf = $dbi_a->[6];
+>                 }
+>                 if (defined($dbi_a->[7]))
+>                 {
+>                         $align_dkim = $dbi_a->[7];
+>                 }
+>
+>                 if (!defined($msgid))
+>                 {
+>                         next;
+>                 }
+>
+>                 $rowcount++;
+>
+>                 switch ($disp)
+>                 {
+>                         case 0  { $dispstr = "reject"; }
+>                         case 1  { $dispstr = "reject"; }
+>                         case 2  { $dispstr = "none"; }
+>                         case 4  { $dispstr = "quarantine"; }
+>                         else    { $dispstr = "unknown"; }
+>                 }
+>
+>                 switch ($spfresult)
+>                 {
+>                         case 0  { $spfresultstr = "pass"; }
+>                         case 2  { $spfresultstr = "softfail"; }
+>                         case 3  { $spfresultstr = "neutral"; }
+>                         case 4  { $spfresultstr = "temperror"; }
+>                         case 5  { $spfresultstr = "permerror"; }
+>                         case 6  { $spfresultstr = "none"; }
+>                         case 7  { $spfresultstr = "fail"; }
+>                         case 8  { $spfresultstr = "policy"; }
+>                         case 9  { $spfresultstr = "nxdomain"; }
+>                         case 10 { $spfresultstr = "signed"; }
+>                         case 12 { $spfresultstr = "discard"; }
+>                         else    { $spfresultstr = "unknown"; }
+>                 }
+>
+>                 switch ($align_dkim)
+>                 {
+>                         case 4  { $align_dkimstr = "pass"; }
+>                         case 5  { $align_dkimstr = "fail"; }
+>                         else    { $align_dkimstr = "unknown"; }
+>                 }
+>
+>                 switch ($align_spf)
+>                 {
+>                         case 4  { $align_spfstr = "pass"; }
+>                         case 5  { $align_spfstr = "fail"; }
+>                         else    { $align_spfstr = "unknown"; }
+>                 }
+>
+>                 print $tmpout " <record>\n";
+>                 print $tmpout "  <row>\n";
+>                 print $tmpout "   <source_ip>$ipaddr</source_ip>\n";
+>                 print $tmpout "   <count>1</count>\n";
+>                 print $tmpout "   <policy_evaluated>\n";
+>                 print $tmpout "    <disposition>$dispstr</disposition>\n";
+>                 print $tmpout "    <dkim>$align_dkimstr</dkim>\n";
+>                 print $tmpout "    <spf>$align_spfstr</spf>\n";
+>                 print $tmpout "   </policy_evaluated>\n";
+>                 print $tmpout "  </row>\n";
+>                 print $tmpout "  <identifiers>\n";
+>                 print $tmpout "   <header_from>$fromdomain</header_from>\n";
+>                 print $tmpout "  </identifiers>\n";
+>                 print $tmpout "  <auth_results>\n";
+>                 print $tmpout "   <spf>\n";
+>                 print $tmpout "    <domain>$envdomain</domain>\n";
+>                 print $tmpout "    <result>$spfresultstr</result>\n";
+>                 print $tmpout "   </spf>\n";
+>
+>                 $dbi_d = $dbi_h->prepare("SELECT domains.name, pass FROM signatures JOIN domains ON signatures.domain = domains.id WHERE signatures.message = ?");
+>                 if (!$dbi_d->execute($msgid))
+>                 {
+>                         print STDERR "$progname: can't extract report for message $msgid: " . $dbi_h->errstr . "\n";
+>                         $dbi_s->finish;
+>                         $dbi_d->finish;
+>                         $dbi_h->disconnect;
+>                         exit(1);
+>                 }
+>
+>                 while ($dbi_a = $dbi_d->fetchrow_arrayref())
+>                 {
+>                         undef $dkimdomain;
+>
+>                         if (defined($dbi_a->[0]))
+>                         {
+>                                 $dkimdomain = $dbi_a->[0];
+>                         }
+>                         if (defined($dbi_a->[1]))
+>                         {
+>                                 $dkimresult = $dbi_a->[1];
+>                         }
+>
+>
+>                         if (!defined($dkimdomain))
+>                         {
+>                                 next;
+>                         }
+>
+>                         switch ($dkimresult)
+>                         {
+>                                 case 0  { $dkimresultstr = "pass"; }
+>                                 case 2  { $dkimresultstr = "softfail"; }
+>                                 case 3  { $dkimresultstr = "neutral"; }
+>                                 case 4  { $dkimresultstr = "temperror"; }
+>                                 case 5  { $dkimresultstr = "permerror"; }
+>                                 case 6  { $dkimresultstr = "none"; }
+>                                 case 7  { $dkimresultstr = "fail"; }
+>                                 case 8  { $dkimresultstr = "policy"; }
+>                                 case 9  { $dkimresultstr = "nxdomain"; }
+>                                 case 10 { $dkimresultstr = "signed"; }
+>                                 case 12 { $dkimresultstr = "discard"; }
+>                                 else    { $dkimresultstr = "unknown"; }
+>                         }
+>
+>                         print $tmpout "   <dkim>\n";
+>                         print $tmpout "    <domain>$dkimdomain</domain>\n";
+>                         print $tmpout "    <result>$dkimresultstr</result>\n";
+>                         print $tmpout "   </dkim>\n";
+>                 }
+>
+>                 $dbi_d->finish;
+>
+>                 print $tmpout "  </auth_results>\n";
+>                 print $tmpout " </record>\n";
+>         }
+>
+>         $dbi_s->finish;
+>
+>         print $tmpout "</feedback>\n";
+>
+>         close($tmpout);
+>
+>         if ($rowcount == 0)
+>         {
+>                 if ($verbose >= 2)
+>                 {
+>                         print STDERR "$progname: no activity selected for $domain; skipping\n";
+>                 }
+>                 if (!$keepfiles)
+>                 {
+>                         unlink($repfile);
+>                 }
+>                 updateDB($domainid);
+>                 next;
+>         }
+>
+>         # zip the report
+>         if (!zip [ $repfile ] => $zipfile,Name => $repfilename)
+>         {
+>                 print STDERR "$progname: can't zip report for domain $domain: $!\n";
+>                 updateDB($domainid);
+>                 next;
+>         }
+>
+>         if ($keepfiles)
+>         {
+>                 print STDERR "$progname: keeping report file \"$repfile\"\n";
+>         }
+>
+>         # decode the URI
+>         @repuris = split(',', $repuri);
+>
+>         for $repuri (@repuris)
+>         {
+>                 $uri = URI->new($repuri);
+>                 if (!defined($uri) ||
+>                     !defined($uri->scheme) ||
+>                     $uri->opaque eq "")
+>                 {
+>                         print STDERR "$progname: can't parse reporting URI for domain $domain\n";
+>                         unlink($zipfile);
+>                         if (!$keepfiles)
+>                         {
+>                                 unlink($repfile);
+>                         }
+>                         next;
+>                 }
+>                 $repdest = $uri->opaque;
+>                 my $report_maxbytes = $report_maxbytes_global;
+>
+>                 # check for max report size
+>                 if ($repdest =~ m/^(\S+)!(\d{1,15})([kmgt])?$/i)
+>                 {
+>                         $repdest = $1;
+>                         $report_maxbytes = $2;
+>                         if ($3)
+>                         {
+>                                 my $letter = lc($3);
+>                                 if ($letter eq 'k')
+>                                 {
+>                                         $report_maxbytes = $report_maxbytes * 1024;
+>                                 }
+>                                 if ($letter eq 'm')
+>                                 {
+>                                         $report_maxbytes = $report_maxbytes * 1048576;
+>                                 }
+>                                 if ($letter eq 'g')
+>                                 {
+>                                         $report_maxbytes = $report_maxbytes * (2**30);
+>                                 }
+>                                 if ($letter eq 't')
+>                                 {
+>                                         $report_maxbytes = $report_maxbytes * (2**40);
+>                                 }
+>                         }
+>                 }
+>                 if ( checkSendingNotificationsAuthorized($domain,$repdest) eq 0 ) {
+>                         print STDERR "$progname: can't send report for domain $domain to address $repdest due to dns checks\n";
+>                         unlink($zipfile);
+>                         if (!$keepfiles)
+>                         {
+>                                 unlink($repfile);
+>                         }
+>                         next;
+>
+>                 }
+>
+>
+>                 # Test mode, just report what would have been done
+>                 if ($testmode)
+>                 {
+>                         print STDERR "$progname: would email $domain report for " .
+>                                      "$rowcount records to " .  $uri->opaque . "\n";
+>                 }
+>                 # ensure a scheme is present
+>                 elsif (!defined($uri->scheme))
+>                 {
+>                         if ($verbose >= 2)
+>                         {
+>                                 print STDERR "$progname: unknown URI scheme in '$repuri' for domain $domain\n";
+>                         }
+>
+>                         unlink($zipfile);
+>                         if (!$keepfiles)
+>                         {
+>                                 unlink($repfile);
+>                         }
+>                         next;
+>                 }
+>                 # send/post report
+>                 elsif ($uri->scheme eq "mailto")
+>                 {
+>                         my $datestr;
+>                         my $report_id;
+>
+>                         if (!open($zipin, $zipfile))
+>                         {
+>                                 print STDERR "$progname: can't read zipped report for $domain: $!\n";
+>                                 unlink($zipfile);
+>                                 if (!$keepfiles)
+>                                 {
+>                                         unlink($repfile);
+>                                 }
+>                                 next;
+>                         }
+>
+>                         $boundary = "report_section";
+>
+>                         $report_id = $domain . "-" . $now . "@" . $repdom;
+>                         $datestr = strftime("%a, %e %b %Y %H:%M:%S %z (%Z)",
+>                                             localtime);
+>
+>                         $mailout  = "To: $repdest\n";
+>                         $mailout .= "From: $repemail\n";
+>                         $mailout .= "Subject: Report Domain: " . $domain . " Submitter: " . $repdom . " Report-ID: " . $report_id . "\n";
+>                         $mailout .= "X-Mailer: " . $progname . " v" . $version ."\n";
+>                         $mailout .= "Date: " . $datestr . "\n";
+>                         $mailout .= "Message-ID: <$report_id>\n";
+>                         $mailout .= "Auto-Submitted: auto-generated\n";
+>                         $mailout .= "MIME-Version: 1.0\n";
+>                         $mailout .= "Content-Type: multipart/mixed; boundary=\"$boundary\"\n";
+>                         $mailout .= "\n";
+>                         $mailout .= "This is a MIME-encapsulated message.\n";
+>                         $mailout .= "\n";
+>                         $mailout .= "--$boundary\n";
+>                         $mailout .= "Content-Type: text/plain;\n";
+>                         $mailout .= "\n";
+>                         $mailout .= "This is a DMARC aggregate report for $domain\n";
+>                         $mailout .= "generated at " . localtime() . "\n";
+>                         $mailout .= "\n";
+>                         $mailout .= "--$boundary\n";
+>                         $mailout .= "Content-Type: application/zip\n";
+>                         $mailout .= "Content-Disposition: attachment; filename=\"$zipfilename\"\n";
+>                         $mailout .= "Content-Transfer-Encoding: base64\n";
+>                         $mailout .= "\n";
+>
+>                         while (read($zipin, $buf, 60*57))
+>                         {
+>                                 $mailout .= encode_base64($buf);
+>                         }
+>
+>                         $mailout .= "\n";
+>                         $mailout .= "--$boundary--\n";
+>                         my $reportsize = length($mailout);
+>
+>                         if ($reportsize > $report_maxbytes)
+>                         {
+>                                 # XXX -- generate an error report here
+>                                 print STDERR "$progname: report was too large ($reportsize bytes) per limitation of URI " . $uri->opaque . " for domain $domain\n";
+>                         }
+>                         else
+>                         {
+>                                 $smtpstatus = "sent";
+>                                 $smtpfail = 0;
+>                                 $smtp = Net::SMTP->new($smtp_server,
+>                                        'Port' => $smtp_port,
+>                                        'Helo' => hostfqdn());
+>                                 if (!defined($smtp))
+>                                 {
+>                                         print STDERR "$progname: open SMTP server $smtp_server:$smtp_port failed\n";
+>                                         exit(1);
+>                                 }
+>                                 if (!$smtp->mail($repemail) ||
+>                                     !$smtp->to($repdest) ||
+>                                     !$smtp->data() ||
+>                                     !$smtp->datasend($mailout) ||
+>                                     !$smtp->dataend())
+>                                 {
+>                                         $smtpfail = 1;
+>                                         $smtpstatus = "failed to send";
+>                                 }
+>
+>                                 if ($verbose || $smtpfail)
+>                                 {
+>                                         # now perl voodoo:
+>                                         $answer = ${${*$smtp}{'net_cmd_resp'}}[1];
+>                                         if ( !( defined $answer ) ) {
+>                                                 $answer=$smtp->message();
+>                                         }
+>                                         chomp($answer);
+>                                         print STDERR "$progname: $smtpstatus report for $domain to $repdest ($answer)\n";
+>                                 }
+>                         }
+>
+>                         $smtp->reset();
+>                         $smtp->quit();
+>
+>                         close($zipin);
+>                 }
+>                 else
+>                 {
+>                         print STDERR "$progname: unsupported reporting URI scheme " . $uri->scheme . " for domain $domain\n";
+>                         unlink($zipfile);
+>                         if (!$keepfiles)
+>                         {
+>                                 unlink($repfile);
+>                         }
+>                         next;
+>                 }
+>         }
+>
+>         # update "last sent" timestamp
+>         updateDB($domainid);
+>
+>         unlink($zipfile);
+>         if (!$keepfiles)
+>         {
+>                 unlink($repfile);
+>         }
+976,977d1099
+< $smtp->quit();
+<
+986c1108
+<       print STDERR "$progname: terminating at " . localtime() . "\n";
+---
+>         print STDERR "$progname: terminating at " . localtime() . "\n";
+990,991c1112
+<
+< exit(0);
+---
+> exit(0);
