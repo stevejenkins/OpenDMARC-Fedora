@@ -20,7 +20,7 @@ Requires(pre): shadow-utils
 
 %if %systemd
 # Required for systemd
-%systemd_requires
+%{?systemd_requires}
 BuildRequires: systemd
 %else
 # Required for SysV
