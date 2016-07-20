@@ -21,6 +21,7 @@ Requires(pre): shadow-utils
 %if %systemd
 # Required for systemd
 %systemd_requires
+BuildRequires: systemd
 %else
 # Required for SysV
 Requires(post): chkconfig
@@ -228,6 +229,7 @@ exit 0
 - Updated to 1.3.2.Beta0 upstream source
 - Removed references to previous docs no longer in source
 - Added patch by Scott Kitterman to fix typo
+- Added BuildRequires: systemd for systemd targets
 
 * Mon Apr 11 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-17
 - Updating spec file to more modern conventions (thx, tibbs)
