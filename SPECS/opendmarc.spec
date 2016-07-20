@@ -1,3 +1,4 @@
+
 %global systemd (0%{?fedora} >= 18) || (0%{?rhel} >= 7)
 %global upname OpenDMARC
 %global bigname OPENDMARC
@@ -5,7 +6,8 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.2
-Release: 0.1.beta0%{?dist}
+Release: 0.2.beta0%{?dist}
+Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.Beta0.tar.gz
@@ -225,6 +227,9 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Wed Jul 20 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.2.beta0
+- Restored Group: System Environment/Daemons field for EL5 build
+
 * Wed Jul 20 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.1.beta0
 - Updated to 1.3.2.Beta0 upstream source
 - Removed references to previous docs no longer in source
