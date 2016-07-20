@@ -11,7 +11,7 @@ URL: http://www.trusteddomain.org/%{name}.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar.gz
 
 # https://sourceforge.net/p/opendmarc/tickets/###/
-#Patch0: %{name}.ticket###.patch
+Patch0: %{name}.beta.compile.1.patch
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
@@ -65,7 +65,7 @@ required for developing applications against libopendmarc.
 %prep
 %setup -q
 # Apply Global patches
-#%patch0 -p1
+%patch0 -p1
 %if %systemd
 # Apply systemd-only patches
 #%patch0 -p1
