@@ -1,26 +1,28 @@
-%global systemd (0%{?fedora} >= 18) || (0%{?rhel} >= 7)
+%global systemd (0%{?fedora} && 0%{?fedora} >= 18) || (0%{?rhel} && 0%{?rhel} >= 7)
 %global upname OpenDMARC
 %global bigname OPENDMARC
 
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
-Version: 1.3.2
-Release: 1%{?dist}
+Version: 1.3.1
+Release: 16%{?dist}
+Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar.gz
 
-# https://sourceforge.net/p/opendmarc/tickets/###/
-Patch0: %{name}.beta.compile.1.patch
-
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
+BuildRequires: perl-generators
 BuildRequires: sendmail-devel, libspf2-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
 Requires(pre): shadow-utils
 
 %if %systemd
 # Required for systemd
-%systemd_requires
+Requires(post): systemd-units
+Requires(preun): systemd-units
+Requires(postun): systemd-units
+Requires(post): systemd-sysv
 %else
 # Required for SysV
 Requires(post): chkconfig
@@ -29,11 +31,23 @@ Requires(postun): initscripts
 %endif
 
 # Required for EL5
-%if 0%{?rhel} == 5
+%if 0%{?rhel} && 0%{?rhel} == 5
 Requires(post): policycoreutils
 %endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+
+# https://sourceforge.net/p/opendmarc/tickets/115/
+Patch0: %{name}.ticket115.patch
+
+# https://sourceforge.net/p/opendmarc/tickets/131/
+Patch1: %{name}.ticket131.patch
+
+# https://sourceforge.net/p/opendmarc/tickets/138/
+Patch2: %{name}.ticket138.patch
+
+# https://sourceforge.net/p/opendmarc/tickets/139/
+Patch3: %{name}.ticket139.patch
 
 %description
 %{upname} (Domain-based Message Authentication, Reporting & Conformance)
@@ -64,14 +78,17 @@ required for developing applications against libopendmarc.
 
 %prep
 %setup -q
-# Apply Global patches
-%patch0 -p1
 %if %systemd
 # Apply systemd-only patches
 #%patch0 -p1
 %else
 # Apply SysV-only patches
 #%patch0 -p1
+# Apply Global patches
+%patch0 -p1
+%patch1 -p1
+%patch2 -p1
+%patch3 -p1
 %endif
 
 %build
@@ -79,32 +96,32 @@ required for developing applications against libopendmarc.
 # properly handle 32 versus 64 bit detection and settings
 %define LIBTOOL LIBTOOL=`which libtool`
 
-%if 0%{?rhel} == 5
+%if 0%{?rhel} && 0%{?rhel} == 5
 %configure --with-sql-backend --with-spf 
 %else
 %configure --with-sql-backend --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
 %endif
 
 # Remove rpath
-sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
-sed -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
+%{__sed} -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
+%{__sed} -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
 
-make DESTDIR=%{buildroot} %{?_smp_mflags} %{LIBTOOL}
+%{__make} DESTDIR=%{buildroot} %{?_smp_mflags} %{LIBTOOL}
 
 %install
-make DESTDIR=%{buildroot} install %{?_smp_mflags} %{LIBTOOL}
-mkdir -p %{buildroot}%{_sysconfdir}
-install -d %{buildroot}%{_sysconfdir}/sysconfig
-mkdir -p -m 0755 %{buildroot}%{_sysconfdir}/%{name}
+%{__make} DESTDIR=%{buildroot} install %{?_smp_mflags} %{LIBTOOL}
+%{__mkdir} -p %{buildroot}%{_sysconfdir}
+%{__install} -d %{buildroot}%{_sysconfdir}/sysconfig
+%{__mkdir} -p -m 0755 %{buildroot}%{_sysconfdir}/%{name}
 
-cat > %{buildroot}%{_sysconfdir}/sysconfig/%{name} << 'EOF'
+%{__cat} > %{buildroot}%{_sysconfdir}/sysconfig/%{name} << 'EOF'
 # Set the necessary startup options
 OPTIONS="-c %{_sysconfdir}/%{name}.conf -P %{_localstatedir}/run/%{name}/%{name}.pid"
 EOF
 
 %if %systemd
-install -d -m 0755 %{buildroot}%{_unitdir}
-cat > %{buildroot}%{_unitdir}/%{name}.service << 'EOF'
+%{__install} -d -m 0755 %{buildroot}%{_unitdir}
+%{__cat} > %{buildroot}%{_unitdir}/%{name}.service << 'EOF'
 [Unit]
 Description=Domain-based Message Authentication, Reporting & Conformance (DMARC) Milter
 Documentation=man:%{name}(8) man:%{name}.conf(5) man:%{name}-import(8) man:%{name}-reports(8) http://www.trusteddomain.org/%{name}/
@@ -123,40 +140,40 @@ Group=%{name}
 WantedBy=multi-user.target
 EOF
 %else
-mkdir -p %{buildroot}%{_initrddir}
-install -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
+%{__mkdir} -p %{buildroot}%{_initrddir}
+%{__install} -m 0755 contrib/init/redhat/%{name} %{buildroot}%{_initrddir}/%{name}
 %endif
 
 # Install and set some basic settings in the default config file
-install -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__install} -m 0644 %{name}/%{name}.conf.sample %{buildroot}%{_sysconfdir}/%{name}.conf
 
-sed -i 's|^# AuthservID name |AuthservID HOSTNAME |' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# HistoryFile /var/run/%{name}.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# SoftwareHeader false|SoftwareHeader true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# SPFIgnoreResults false|SPFIgnoreResults true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# SPFSelfValidate false|SPFSelfValidate true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# Syslog false|Syslog true|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# UMask 077|UMask 007|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|^# UserID %{name}|UserID %{name}:mail|' %{buildroot}%{_sysconfdir}/%{name}.conf
-sed -i 's|/usr/local||' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# AuthservID name |AuthservID HOSTNAME |' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# HistoryFile /var/run/%{name}.dat|# HistoryFile %{_localstatedir}/spool/%{name}/%{name}.dat|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# Socket |Socket |' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# SoftwareHeader false|SoftwareHeader true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# SPFIgnoreResults false|SPFIgnoreResults true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# SPFSelfValidate false|SPFSelfValidate true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# Syslog false|Syslog true|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# UMask 077|UMask 007|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|^# UserID %{name}|UserID %{name}:mail|' %{buildroot}%{_sysconfdir}/%{name}.conf
+%{__sed} -i 's|/usr/local||' %{buildroot}%{_sysconfdir}/%{name}.conf
 
-install -p -d %{buildroot}%{_sysconfdir}/tmpfiles.d
-cat > %{buildroot}%{_sysconfdir}/tmpfiles.d/%{name}.conf <<EOF
+%{__install} -p -d %{buildroot}%{_sysconfdir}/tmpfiles.d
+%{__cat} > %{buildroot}%{_sysconfdir}/tmpfiles.d/%{name}.conf <<EOF
 D %{_localstatedir}/run/%{name} 0700 %{name} %{name} -
 EOF
 
-rm -rf %{buildroot}%{_prefix}/share/doc/%{name}
+%{__rm} -rf %{buildroot}%{_prefix}/share/doc/%{name}
 #mv %{buildroot}%{_prefix}/share/doc/%{name} %{buildroot}%{_prefix}/share/doc/%{name}-%{version}
 #find %{buildroot}%{_prefix}/share/doc/%{name}-%{version} -type f -exec chmod 0644 \{\} \;
 #sed -i -e 's:/usr/local/bin/python:/usr/bin/python:' %{buildroot}%{_prefix}/share/doc/%{name}/dmarcfail.py
-rm %{buildroot}%{_libdir}/*.{la,a}
+%{__rm} %{buildroot}%{_libdir}/*.{la,a}
 
-mkdir -p %{buildroot}%{_includedir}/%{name}
-install -m 0644 lib%{name}/dmarc.h %{buildroot}%{_includedir}/%{name}/
+%{__mkdir} -p %{buildroot}%{_includedir}/%{name}
+%{__install} -m 0644 lib%{name}/dmarc.h %{buildroot}%{_includedir}/%{name}/
 
-mkdir -p %{buildroot}%{_localstatedir}/spool/%{name}
-mkdir -p %{buildroot}%{_localstatedir}/run/%{name}
+%{__mkdir} -p %{buildroot}%{_localstatedir}/spool/%{name}
+%{__mkdir} -p %{buildroot}%{_localstatedir}/run/%{name}
 
 %pre
 getent group %{name} >/dev/null || groupadd -r %{name}
@@ -197,9 +214,17 @@ exit 0
 
 %postun -n libopendmarc -p /sbin/ldconfig
 
+%clean
+%{__rm} -rf %{buildroot}
+
 %files
+%if 0%{?_licensedir:1}
 %license LICENSE LICENSE.Sendmail
-%doc README RELEASE_NOTES
+%else
+%doc LICENSE LICENSE.Sendmail
+%endif
+%doc README RELEASE_NOTES docs/draft-dmarc-base-13.txt
+%doc db/README.schema db/schema.mysql
 %config(noreplace) %{_sysconfdir}/%{name}.conf
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/%{name}.conf
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
@@ -224,13 +249,6 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
-* Wed Jul 20 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-1
-- Updating to newer upstream source which incorprates previous patches
-- Removing docs no longer in source
-
-* Mon Apr 11 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-17
-- Updating spec file to more modern conventions (thx, tibbs)
-
 * Mon Apr 11 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-16
 - Added patches for SourceForge tickets 115, 131, 138, 139
 
