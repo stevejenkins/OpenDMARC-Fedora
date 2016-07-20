@@ -199,8 +199,7 @@ exit 0
 
 %files
 %license LICENSE LICENSE.Sendmail
-%doc README RELEASE_NOTES docs/draft-dmarc-base-13.txt
-%doc db/README.schema db/schema.mysql
+%doc README RELEASE_NOTES
 %config(noreplace) %{_sysconfdir}/%{name}.conf
 %config(noreplace) %{_sysconfdir}/tmpfiles.d/%{name}.conf
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
@@ -227,6 +226,7 @@ exit 0
 %changelog
 * Wed Jul 20 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-1
 - Updating to newer upstream source which incorprates previous patches
+- Removing docs no longer in source
 
 * Mon Apr 11 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-17
 - Updating spec file to more modern conventions (thx, tibbs)
