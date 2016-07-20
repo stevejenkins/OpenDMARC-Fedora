@@ -4,7 +4,7 @@
 
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
-Version: 1.3.2.Beta0
+Version: 1.3.2
 Release: 1%{?dist}
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
