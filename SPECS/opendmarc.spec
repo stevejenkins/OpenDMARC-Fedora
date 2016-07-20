@@ -4,23 +4,14 @@
 
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
-Version: 1.3.1
-Release: 17%{?dist}
+Version: 1.3.2.Beta0
+Release: 1%{?dist}
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.tar.gz
 
-# https://sourceforge.net/p/opendmarc/tickets/115/
-Patch0: %{name}.ticket115.patch
-
-# https://sourceforge.net/p/opendmarc/tickets/131/
-Patch1: %{name}.ticket131.patch
-
-# https://sourceforge.net/p/opendmarc/tickets/138/
-Patch2: %{name}.ticket138.patch
-
-# https://sourceforge.net/p/opendmarc/tickets/139/
-Patch3: %{name}.ticket139.patch
+# https://sourceforge.net/p/opendmarc/tickets/###/
+#Patch0: %{name}.ticket###.patch
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
@@ -74,10 +65,7 @@ required for developing applications against libopendmarc.
 %prep
 %setup -q
 # Apply Global patches
-%patch0 -p1
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
+#%patch0 -p1
 %if %systemd
 # Apply systemd-only patches
 #%patch0 -p1
@@ -237,6 +225,9 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Wed Jul 20 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-1
+- Updating to newer upstream source which incorprates previous patches
+
 * Mon Apr 11 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.1-17
 - Updating spec file to more modern conventions (thx, tibbs)
 
