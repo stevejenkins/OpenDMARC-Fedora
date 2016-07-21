@@ -1,4 +1,3 @@
-
 %global systemd (0%{?fedora} >= 18) || (0%{?rhel} >= 7)
 %global upname OpenDMARC
 %global bigname OPENDMARC
