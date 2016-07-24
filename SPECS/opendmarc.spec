@@ -5,14 +5,17 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.2
-Release: 0.3.beta0%{?dist}
+Release: 0.4.beta0%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.Beta0.tar.gz
 
 # Patches usually from https://sourceforge.net/p/opendmarc/tickets/###/
+
+# Patch to fix typo of missing quote in opendmarc.c
 Patch0: %{name}.beta.compile.1.patch
+# https://sourceforge.net/p/opendmarc/tickets/179/
 Patch1: %{name}.ticket179.patch
 
 # Required for all versions
@@ -227,6 +230,9 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Sat Jul 23 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.4.beta0
+- Revised patch for #1287176 to fix opendmarc-import path
+
 * Thu Jul 21 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.3.beta0
 - Patched for #1287176 to fix opendmarc-import path
 
