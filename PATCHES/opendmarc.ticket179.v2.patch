@@ -1,0 +1,11 @@
+--- /reports/opendmarc-importstats.old	2016-07-21 17:56:31.000000000 +0100
++++ /reports/opendmarc-importstats	2016-07-21 17:54:15.000000000 +0100
+@@ -17,7 +17,7 @@
+ then
+ 	mv $statsdb ${statsdb}.OLD.$$
+ 
+-	if opendmarc-import < ${statsdb}.OLD.$$
++	if @sbindir@/opendmarc-import < ${statsdb}.OLD.$$
+ 	then
+ 		rm ${statsdb}.OLD.$$
+ 	else
