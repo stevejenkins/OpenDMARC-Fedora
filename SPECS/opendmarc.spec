@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.2
-Release: 0.5%{?dist}
+Release: 0.7%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
@@ -35,7 +35,7 @@ Requires(postun): initscripts
 %endif
 
 # sendmail-devel renamed for F25+
-%if 0%{?fedora} >= 25
+%if 0%{?fedora} > 25
 BuildRequires: sendmail-milter-devel
 %else
 BuildRequires: sendmail-devel
@@ -94,7 +94,7 @@ required for developing applications against libopendmarc.
 %define LIBTOOL LIBTOOL=`which libtool`
 
 %if 0%{?rhel} == 5
-%configure --with-sql-backend --with-spf 
+%configure --with-sql-backend --with-spf
 %else
 %configure --with-sql-backend --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
 %endif
@@ -238,6 +238,12 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* ??? Aug 04 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.7
+- Minor cleanup of spec file
+
+* Thu Aug 04 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.6
+- Changed sendmail-milter-devel BuildRequires to > F25
+
 * Thu Aug 04 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.5
 - Updated BuildRequires to sendmail-milter-devel for F25+ (RH Bugzilla #891288)
 
@@ -365,4 +371,3 @@ exit 0
 
 * Tue Aug  7 2012 Todd Lyons <tlyons@ivenue.com> 0.1.8-1iv
 - Initial Packaging of opendmarc
-
