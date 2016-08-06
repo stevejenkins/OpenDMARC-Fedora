@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.2
-Release: 0.4.beta0%{?dist}
+Release: 0.5%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
@@ -20,7 +20,7 @@ Patch1: %{name}.ticket179.patch
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
-BuildRequires: sendmail-devel, libspf2-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
+BuildRequires: libspf2-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
 Requires(pre): shadow-utils
 
 %if %systemd
@@ -32,6 +32,13 @@ BuildRequires: systemd
 Requires(post): chkconfig
 Requires(preun): chkconfig, initscripts
 Requires(postun): initscripts
+%endif
+
+# sendmail-devel renamed for F25+
+%if 0%{?fedora} >= 25
+BuildRequires: sendmail-milter-devel
+%else
+BuildRequires: sendmail-devel
 %endif
 
 # Required for EL5
@@ -72,12 +79,13 @@ required for developing applications against libopendmarc.
 %setup -q
 # Apply Global patches
 %patch0 -p1
+%patch1 -p1
 %if %systemd
 # Apply systemd-only patches
 #%patch0 -p1
 %else
 # Apply SysV-only patches
-%patch1 -p1
+#%patch0 -p1
 %endif
 
 %build
@@ -230,6 +238,9 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Thu Aug 04 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.5
+- Updated BuildRequires to sendmail-milter-devel for F25+ (RH Bugzilla #891288)
+
 * Sat Jul 23 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.4.beta0
 - Revised patch for #1287176 to fix opendmarc-import path
 
