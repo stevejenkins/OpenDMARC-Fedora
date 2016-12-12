@@ -1,0 +1,13 @@
+diff --git a/opendmarc/opendmarc.c b/opendmarc/opendmarc.c
+index ba04312..57eec37 100644
+--- a/opendmarc/opendmarc.c
++++ b/opendmarc/opendmarc.c
+@@ -1686,7 +1686,7 @@ mlfi_connect(SMFICTX *ctx, char *host, _SOCK_ADDR *ip)
+ 	if (dmarcf_checkhost(host, ignore) ||
+ 	    (ip != NULL && dmarcf_checkip(ip, ignore)))
+ 	{
+-		if (conf->conf_dolog)
++		if (curconf->conf_dolog)
+ 			syslog(LOG_INFO, "ignoring connection from %s", host);
+ 		return SMFIS_ACCEPT;
+ 	}

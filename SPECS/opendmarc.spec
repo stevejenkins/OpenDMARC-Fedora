@@ -17,6 +17,8 @@ Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.Bet
 Patch0: %{name}.beta.compile.1.patch
 # https://sourceforge.net/p/opendmarc/tickets/179/
 Patch1: %{name}.ticket179.patch
+# https://sourceforge.net/p/opendmarc/tickets/185/ (crasher)
+Patch2: %{name}.ticket185.patch
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
@@ -80,6 +82,7 @@ required for developing applications against libopendmarc.
 # Apply Global patches
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1
 %if %systemd
 # Apply systemd-only patches
 #%patch0 -p1
@@ -94,7 +97,7 @@ required for developing applications against libopendmarc.
 %define LIBTOOL LIBTOOL=`which libtool`
 
 %if 0%{?rhel} == 5
-%configure --with-sql-backend --with-spf
+%configure --with-sql-backend --with-spf 
 %else
 %configure --with-sql-backend --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
 %endif
@@ -238,8 +241,8 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
-* ??? Aug 04 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.7
-- Minor cleanup of spec file
+* Thu Nov 24 2016 Adam Williamson <awilliam@redhat.com> - 1.3.2-0.7
+- Add a fix for a crasher (upstream ticket #185) from Juri Haberland
 
 * Thu Aug 04 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.6
 - Changed sendmail-milter-devel BuildRequires to > F25
@@ -371,3 +374,4 @@ exit 0
 
 * Tue Aug  7 2012 Todd Lyons <tlyons@ivenue.com> 0.1.8-1iv
 - Initial Packaging of opendmarc
+
