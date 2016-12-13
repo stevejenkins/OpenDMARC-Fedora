@@ -1,0 +1,15 @@
+diff --git a/opendmarc/opendmarc.c b/opendmarc/opendmarc.c
+index ba04312..2680144 100644
+--- a/opendmarc/opendmarc.c
++++ b/opendmarc/opendmarc.c
+@@ -2587,8 +2587,8 @@ mlfi_eom(SMFICTX *ctx)
+ 			{
+ 				char *mode;
+ 
+-				if (mode == DMARC_POLICY_SPF_ORIGIN_HELO)
+-					mode = "helo:
++				if (spf_mode == DMARC_POLICY_SPF_ORIGIN_HELO)
++					mode = "helo";
+ 				else
+ 					mode = "mailfrom";
+ 
