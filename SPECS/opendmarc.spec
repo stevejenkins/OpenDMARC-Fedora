@@ -5,22 +5,43 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.2
-Release: 0.4.beta0%{?dist}
+Release: 0.8%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.Beta0.tar.gz
 
-# Patches usually from https://sourceforge.net/p/opendmarc/tickets/###/
+# Patches from Juri Haberland's 1.3.2-beta0 patch set:
+# http://batleth.sapienti-sat.org/projects/opendmarc/
+# http://batleth.sapienti-sat.org/projects/opendmarc/patches-2016110801.tar.gz
+# Some are rediffed to apply serially with fuzz=0 (as autosetup requires)
+Patch1:   ticket095.patch
+Patch2:   ticket153.patch
+Patch3:   ticket159.patch
+Patch4:   ticket165_incomplete.patch
+Patch5:   ticket166.patch
+Patch6:   ticket171.patch
+Patch7:   ticket174.patch
+Patch8:   ticket181.patch
+Patch9:   ticket185.patch
+Patch10:   ticket186.patch
+Patch11:   ticket187.patch
+Patch12:   ticket188.patch
+Patch13:   ticket193.patch
+Patch14:   ticket195.patch
+Patch15:   ticket196.patch
+Patch16:   ticket197.patch
+Patch17:   z05_ticket194.patch
 
-# Patch to fix typo of missing quote in opendmarc.c
-Patch0: %{name}.beta.compile.1.patch
-# https://sourceforge.net/p/opendmarc/tickets/179/
-Patch1: %{name}.ticket179.patch
+# https://sourceforge.net/p/opendmarc/tickets/179/ , rediffed
+# must come after ticket159.patch
+#Patch18: %{name}.ticket179.patch
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
-BuildRequires: sendmail-devel, libspf2-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
+BuildRequires: libspf2-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
+# Required when patching the build scripts
+BuildRequires: autoconf, automake
 Requires(pre): shadow-utils
 
 %if %systemd
@@ -34,12 +55,17 @@ Requires(preun): chkconfig, initscripts
 Requires(postun): initscripts
 %endif
 
+# sendmail-devel renamed for F25+
+%if 0%{?fedora} > 25
+BuildRequires: sendmail-milter-devel
+%else
+BuildRequires: sendmail-devel
+%endif
+
 # Required for EL5
 %if 0%{?rhel} == 5
 Requires(post): policycoreutils
 %endif
-
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %description
 %{upname} (Domain-based Message Authentication, Reporting & Conformance)
@@ -69,21 +95,15 @@ This package contains the static libraries, headers, and other support files
 required for developing applications against libopendmarc.
 
 %prep
-%setup -q
-# Apply Global patches
-%patch0 -p1
-%if %systemd
-# Apply systemd-only patches
-#%patch0 -p1
-%else
-# Apply SysV-only patches
-%patch1 -p1
-%endif
+%autosetup -p1
 
 %build
 # Always use system libtool instead of package-provided one to
 # properly handle 32 versus 64 bit detection and settings
 %define LIBTOOL LIBTOOL=`which libtool`
+
+# needed since we're patching the build process
+autoreconf -i
 
 %if 0%{?rhel} == 5
 %configure --with-sql-backend --with-spf 
@@ -230,6 +250,19 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Mon Dec 12 2016 Adam Williamson <awilliam@redhat.com> - 1.3.2-0.8
+- Add a ton more important fixes from Juri Haberland
+- Modernize spec slightly (thanks to EPEL 5 getting a bit more modern)
+
+* Thu Nov 24 2016 Adam Williamson <awilliam@redhat.com> - 1.3.2-0.7
+- Add a fix for a crasher (upstream ticket #185) from Juri Haberland
+
+* Thu Aug 04 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.6
+- Changed sendmail-milter-devel BuildRequires to > F25
+
+* Thu Aug 04 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.5
+- Updated BuildRequires to sendmail-milter-devel for F25+ (RH Bugzilla #891288)
+
 * Sat Jul 23 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.4.beta0
 - Revised patch for #1287176 to fix opendmarc-import path
 
