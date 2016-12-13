@@ -77,7 +77,7 @@ index ba0de76..e81aaf0 100755
  	{
  		print STDERR "$progname: can't create report file for domain $domain\n";
 @@ -531,39 +548,6 @@ foreach (@$domainset)
- 		else		{ $spolicystr = "unknown"; }
+  		else		{ $spolicystr = "unknown"; }
   	}
  
 -	if ($daybound)

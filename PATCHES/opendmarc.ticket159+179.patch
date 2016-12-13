@@ -1,0 +1,28 @@
+diff --git a/configure.ac b/configure.ac
+index bb72d9a..eaaf6c2 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -492,6 +492,7 @@ AC_OUTPUT([ Makefile
+ 		reports/opendmarc-expire.8
+ 		reports/opendmarc-import
+ 		reports/opendmarc-import.8
++		reports/opendmarc-importstats
+ 		reports/opendmarc-importstats.8
+ 		reports/opendmarc-params
+ 		reports/opendmarc-params.8
+diff --git a/opendmarc-1.3.2/reports/opendmarc-importstats b/opendmarc-1.3.2-p179/reports/opendmarc-importstats.in
+similarity index 92%
+rename from reports/opendmarc-importstats
+rename to reports/opendmarc-importstats.in
+index 839a871..43156b4 100755
+--- a/reports/opendmarc-importstats
++++ b/reports/opendmarc-importstats.in
+@@ -17,7 +17,7 @@ if [ -s $statsdb ]
+ then
+ 	mv $statsdb ${statsdb}.OLD.$$
+ 
+-	if opendmarc-import < ${statsdb}.OLD.$$
++	if @sbindir@/opendmarc-import < ${statsdb}.OLD.$$
+ 	then
+ 		rm ${statsdb}.OLD.$$
+ 	else
