@@ -5,37 +5,31 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.2
-Release: 0.8%{?dist}
+Release: 0.9%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
 Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.Beta0.tar.gz
 
-# Patches from Juri Haberland's 1.3.2-beta0 patch set:
-# http://batleth.sapienti-sat.org/projects/opendmarc/
-# http://batleth.sapienti-sat.org/projects/opendmarc/patches-2016110801.tar.gz
+# Non-sequential patch order is delibrate (and necessary)
 # Some are rediffed to apply serially with fuzz=0 (as autosetup requires)
-Patch1:   ticket095.patch
-Patch2:   ticket153.patch
-Patch3:   ticket159.patch
-Patch4:   ticket165_incomplete.patch
-Patch5:   ticket166.patch
-Patch6:   ticket171.patch
-Patch7:   ticket174.patch
-Patch8:   ticket181.patch
-Patch9:   ticket185.patch
-Patch10:   ticket186.patch
-Patch11:   ticket187.patch
-Patch12:   ticket188.patch
-Patch13:   ticket193.patch
-Patch14:   ticket195.patch
-Patch15:   ticket196.patch
-Patch16:   ticket197.patch
-Patch17:   z05_ticket194.patch
-
-# https://sourceforge.net/p/opendmarc/tickets/179/ , rediffed
-# must come after ticket159.patch
-#Patch18: %{name}.ticket179.patch
+Patch01:   %{name}.ticket095.patch
+Patch02:   %{name}.ticket153.patch
+Patch03:   %{name}.ticket159+179.patch
+Patch04:   %{name}.ticket165_incomplete.patch
+Patch05:   %{name}.ticket166.patch
+Patch06:   %{name}.ticket171.patch
+Patch07:   %{name}.ticket174.patch
+Patch08:   %{name}.ticket181.patch
+Patch09:   %{name}.ticket185.patch
+Patch10:   %{name}.ticket186.patch
+Patch11:   %{name}.ticket187.patch
+Patch12:   %{name}.ticket188.patch
+Patch13:   %{name}.ticket193.patch
+Patch14:   %{name}.ticket195.patch
+Patch15:   %{name}.ticket196.patch
+Patch16:   %{name}.ticket197.patch
+Patch18:   %{name}.ticket194.patch
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
@@ -250,6 +244,9 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Tue Dec 13 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.9
+- Combined fixes for upstream tickets #159 + #179 into a single patch
+
 * Mon Dec 12 2016 Adam Williamson <awilliam@redhat.com> - 1.3.2-0.8
 - Add a ton more important fixes from Juri Haberland
 - Modernize spec slightly (thanks to EPEL 5 getting a bit more modern)
