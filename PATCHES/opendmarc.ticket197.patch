@@ -20,19 +20,19 @@ index 3f878cb..99152bd 100644
  	align_dkim TINYINT UNSIGNED NOT NULL,
  	align_spf TINYINT UNSIGNED NOT NULL,
  	sigcount TINYINT UNSIGNED NOT NULL,
-diff --git a/reports/Makefile.am b/reports/Makefile.am
+diff --git a/reports/Makefile.in b/reports/Makefile.in
 index 11c8080..cfb0f36 100644
---- a/reports/Makefile.am
-+++ b/reports/Makefile.am
-@@ -2,7 +2,7 @@
- 
+--- a/reports/Makefile.in
++++ b/reports/Makefile.in
+@@ -292,7 +292,7 @@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
  AUTOMAKE_OPTIONS = foreign
- 
 -dist_doc_DATA = README mkdb.mysql
 +dist_doc_DATA = README
- 
  dist_sbin_SCRIPTS = opendmarc-expire opendmarc-import opendmarc-importstats \
  	opendmarc-params opendmarc-reports
+ 
 diff --git a/reports/README b/reports/README
 index 90267fe..0ef7c80 100644
 --- a/reports/README

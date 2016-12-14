@@ -1,12 +1,16 @@
-diff --git a/db/Makefile.am b/db/Makefile.am
+diff --git a/db/Makefile.in b/db/Makefile.in
 index 43b8614..83bc1d1 100644
---- a/db/Makefile.am
-+++ b/db/Makefile.am
-@@ -1,3 +1,3 @@
- # Copyright (c) 2012, The Trusted Domain Project.  All rights reserved.
- 
+--- a/db/Makefile.in
++++ b/db/Makefile.in
+@@ -276,7 +276,7 @@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
 -dist_doc_DATA = README.schema schema.mysql
 +dist_doc_DATA = README.schema schema.mysql README.update-db-schema.mysql update-db-schema.mysql
+ all: all-am
+ 
+ .SUFFIXES:
 diff --git a/db/README.update-db-schema.mysql b/db/README.update-db-schema.mysql
 new file mode 100644
 index 0000000..8a6a909

@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.2
-Release: 0.9%{?dist}
+Release: 0.10%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
@@ -15,6 +15,9 @@ Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.Bet
 # Some are rediffed to apply serially with fuzz=0 (as autosetup requires)
 Patch01:   %{name}.ticket095.patch
 Patch02:   %{name}.ticket153.patch
+# applies to configure instead of configure.ac as we cannot run autoconf
+# on EPEL 5, it is too old. also does not use git diff 'rename' syntax
+# as EPEL 5 can't handle that either
 Patch03:   %{name}.ticket159+179.patch
 Patch04:   %{name}.ticket165_incomplete.patch
 Patch05:   %{name}.ticket166.patch
@@ -25,17 +28,19 @@ Patch09:   %{name}.ticket185.patch
 Patch10:   %{name}.ticket186.patch
 Patch11:   %{name}.ticket187.patch
 Patch12:   %{name}.ticket188.patch
+# adapted to apply to Makefile.in instead of Makefile.am as we cannot
+# run autoreconf on EPEL 5, autoconf is too old
 Patch13:   %{name}.ticket193.patch
 Patch14:   %{name}.ticket195.patch
 Patch15:   %{name}.ticket196.patch
+# adapted to apply to Makefile.in instead of Makefile.am as we cannot
+# run autoreconf on EPEL 5, autoconf is too old
 Patch16:   %{name}.ticket197.patch
 Patch18:   %{name}.ticket194.patch
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
 BuildRequires: libspf2-devel, openssl-devel, libtool, pkgconfig, libbsd, libbsd-devel, mysql-devel
-# Required when patching the build scripts
-BuildRequires: autoconf, automake
 Requires(pre): shadow-utils
 
 %if %systemd
@@ -95,9 +100,6 @@ required for developing applications against libopendmarc.
 # Always use system libtool instead of package-provided one to
 # properly handle 32 versus 64 bit detection and settings
 %define LIBTOOL LIBTOOL=`which libtool`
-
-# needed since we're patching the build process
-autoreconf -i
 
 %if 0%{?rhel} == 5
 %configure --with-sql-backend --with-spf 
@@ -244,6 +246,9 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Tue Dec 13 2016 Adam Williamson <awilliam@redhat.com> - 1.3.2-0.10
+- adapt several patches for building on EPEL 5 (without autoreconf)
+
 * Tue Dec 13 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.9
 - Combined fixes for upstream tickets #159 + #179 into a single patch
 
