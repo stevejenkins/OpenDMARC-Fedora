@@ -5,11 +5,11 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.2
-Release: 0.10%{?dist}
+Release: 0.12%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
-Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.Beta0.tar.gz
+Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.Beta1.tar.gz
 
 # Non-sequential patch order is delibrate (and necessary)
 # Some are rediffed to apply serially with fuzz=0 (as autosetup requires)
@@ -21,22 +21,11 @@ Patch02:   %{name}.ticket153.patch
 Patch03:   %{name}.ticket159+179.patch
 Patch04:   %{name}.ticket165_incomplete.patch
 Patch05:   %{name}.ticket166.patch
-Patch06:   %{name}.ticket171.patch
-Patch07:   %{name}.ticket174.patch
-Patch08:   %{name}.ticket181.patch
 Patch09:   %{name}.ticket185.patch
-Patch10:   %{name}.ticket186.patch
 Patch11:   %{name}.ticket187.patch
-Patch12:   %{name}.ticket188.patch
 # adapted to apply to Makefile.in instead of Makefile.am as we cannot
 # run autoreconf on EPEL 5, autoconf is too old
 Patch13:   %{name}.ticket193.patch
-Patch14:   %{name}.ticket195.patch
-Patch15:   %{name}.ticket196.patch
-# adapted to apply to Makefile.in instead of Makefile.am as we cannot
-# run autoreconf on EPEL 5, autoconf is too old
-Patch16:   %{name}.ticket197.patch
-Patch18:   %{name}.ticket194.patch
 
 # Required for all versions
 Requires: lib%{name}%{?_isa} = %{version}-%{release}
@@ -102,9 +91,9 @@ required for developing applications against libopendmarc.
 %define LIBTOOL LIBTOOL=`which libtool`
 
 %if 0%{?rhel} == 5
-%configure --with-sql-backend --with-spf 
+%configure --with-sql-backend --with-spf
 %else
-%configure --with-sql-backend --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so --with-sql-backend
+%configure --with-sql-backend --with-spf -with-spf2-include=%{_prefix}/include/spf2 --with-spf2-lib=%{_libdir}/libspf2.so
 %endif
 
 # Remove rpath
@@ -246,8 +235,15 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Mon Dec 19 2016 Adam Williamson <awilliam@redhat.com> - 1.3.2-0.12
+- rediff and re-enable patches
+
+* Sun Dec 18 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.11
+- Updated to 1.3.2.Beta1 upstream source
+- Removed patches no longer required due to new source
+
 * Tue Dec 13 2016 Adam Williamson <awilliam@redhat.com> - 1.3.2-0.10
-- adapt several patches for building on EPEL 5 (without autoreconf)
+- Adapt several patches for building on EPEL 5 (without autoreconf)
 
 * Tue Dec 13 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.9
 - Combined fixes for upstream tickets #159 + #179 into a single patch
