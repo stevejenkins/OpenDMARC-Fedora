@@ -5,7 +5,7 @@
 Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
 Name: opendmarc
 Version: 1.3.2
-Release: 0.11%{?dist}
+Release: 0.12%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
@@ -18,7 +18,7 @@ Patch02:   %{name}.ticket153.patch
 # applies to configure instead of configure.ac as we cannot run autoconf
 # on EPEL 5, it is too old. also does not use git diff 'rename' syntax
 # as EPEL 5 can't handle that either
-#Patch03:   %{name}.ticket159+179.patch
+Patch03:   %{name}.ticket159+179.patch
 Patch04:   %{name}.ticket165_incomplete.patch
 Patch05:   %{name}.ticket166.patch
 Patch09:   %{name}.ticket185.patch
@@ -235,6 +235,9 @@ exit 0
 %{_libdir}/*.so
 
 %changelog
+* Mon Dec 19 2016 Adam Williamson <awilliam@redhat.com> - 1.3.2-0.12
+- rediff and re-enable patches
+
 * Sun Dec 18 2016 Steve Jenkins <steve@stevejenkins.com> - 1.3.2-0.11
 - Updated to 1.3.2.Beta1 upstream source
 - Removed patches no longer required due to new source
