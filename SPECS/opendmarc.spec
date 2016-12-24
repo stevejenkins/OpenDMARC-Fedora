@@ -2,14 +2,14 @@
 %global upname OpenDMARC
 %global bigname OPENDMARC
 
-Summary: A Domain-based Message Authentication, Reporting & Conformance (DMARC) milter and library
+Summary: DMARC Milter and Library
 Name: opendmarc
 Version: 1.3.2
 Release: 0.12%{?dist}
 Group: System Environment/Daemons
 License: BSD and Sendmail
 URL: http://www.trusteddomain.org/%{name}.html
-Source0: http://downloads.sourceforge.net/project/%{name}/%{name}-%{version}.Beta1.tar.gz
+Source0: http://downloads.sourceforge.net/projects/%{name}/files/Pre-Release/%{name}-%{version}.Beta1.tar.gz
 
 # Non-sequential patch order is delibrate (and necessary)
 # Some are rediffed to apply serially with fuzz=0 (as autosetup requires)
