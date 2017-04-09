@@ -1,0 +1,4 @@
+289c289
+<               if ($dbi_s->execute)
+---
+>               if (!$dbi_s->execute)
